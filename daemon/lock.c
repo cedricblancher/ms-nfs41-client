@@ -86,11 +86,11 @@ static void open_lock_add(
     ReleaseSRWLockExclusive(&open->lock);
 }
 
-static bool_t open_lock_delegate(
+static bool open_lock_delegate(
     IN nfs41_open_state *open,
     IN nfs41_lock_state *lock)
 {
-    bool_t delegated = FALSE;
+    bool delegated = false;
 
     AcquireSRWLockExclusive(&open->lock);
     if (open->delegation.state) {
@@ -101,7 +101,7 @@ static bool_t open_lock_delegate(
             lock->delegated = 1;
             lock->id = open->locks.counter++;
             list_add_tail(&open->locks.list, &lock->open_entry);
-            delegated = TRUE;
+            delegated = true;
         }
         ReleaseSRWLockShared(&deleg->lock);
     }

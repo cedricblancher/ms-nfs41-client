@@ -350,7 +350,7 @@ int create_silly_rename(
     IN const nfs41_fh *fh,
     OUT nfs41_component *silly);
 
-bool_t multi_addr_find(
+bool multi_addr_find(
     IN const multi_addr4 *addrs,
     IN const netaddr4 *addr,
     OUT OPTIONAL uint32_t *index_out);
@@ -397,17 +397,17 @@ __inline const char* prev_non_delimiter(const char *pos, const char *start) {
     return pos;
 }
 
-bool_t next_component(
+bool next_component(
     IN const char *path,
     IN const char *path_end,
     OUT nfs41_component *component);
 
-bool_t last_component(
+bool last_component(
     IN const char *path,
     IN const char *path_end,
     OUT nfs41_component *component);
 
-bool_t is_last_component(
+bool is_last_component(
     IN const char *path,
     IN const char *path_end);
 
@@ -441,8 +441,8 @@ subcmd_popen_context *subcmd_popen(const char *command);
 int subcmd_pclose(subcmd_popen_context *pinfo);
 BOOL subcmd_readcmdoutput(subcmd_popen_context *pinfo, char *buff, size_t buff_size, DWORD *num_buff_read_ptr);
 
-bool_t waitSRWlock(PSRWLOCK srwlock);
-bool_t waitcriticalsection(LPCRITICAL_SECTION cs);
+bool waitSRWlock(PSRWLOCK srwlock);
+bool waitcriticalsection(LPCRITICAL_SECTION cs);
 
 bool getwinntversionnnumbers(DWORD *MajorVersionPtr, DWORD *MinorVersionPtr, DWORD *BuildNumberPtr);
 

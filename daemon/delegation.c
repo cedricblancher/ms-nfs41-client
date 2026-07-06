@@ -129,15 +129,15 @@ static void delegation_remove(
 /* delegation return */
 #define lock_entry(pos) list_container(pos, nfs41_lock_state, open_entry)
 
-static bool_t has_delegated_locks(
+static bool has_delegated_locks(
     IN nfs41_open_state *open)
 {
     struct list_entry *entry;
     list_for_each(entry, &open->locks.list) {
         if (lock_entry(entry)->delegated)
-            return TRUE;
+            return true;
     }
-    return FALSE;
+    return false;
 }
 
 static int open_deleg_cmp(const struct list_entry *entry, const void *value)
@@ -174,12 +174,12 @@ static nfs41_open_state* deleg_open_find(
 }
 
 /* find the first lock that needs recovery */
-static bool_t deleg_lock_find(
+static bool deleg_lock_find(
     IN nfs41_open_state *open,
     OUT nfs41_lock_state *lock_out)
 {
     struct list_entry *entry;
-    bool_t found = FALSE;
+    bool found = false;
 
     AcquireSRWLockShared(&open->lock);
     list_for_each(entry, &open->locks.list) {
@@ -190,7 +190,7 @@ static bool_t deleg_lock_find(
             lock_out->length = lock->length;
             lock_out->exclusive = lock->exclusive;
             lock_out->id = lock->id;
-            found = TRUE;
+            found = true;
             break;
         }
     }

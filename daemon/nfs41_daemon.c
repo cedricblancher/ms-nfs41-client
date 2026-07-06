@@ -239,24 +239,24 @@ typedef struct _nfsd_args {
     int debug_level;
 } nfsd_args;
 
-static bool_t check_for_files(const wchar_t *argv0)
+static bool check_for_files(const wchar_t *argv0)
 {
     if (_access(FILE_NETCONFIG, 04) != 0) {
         (void)fprintf(stderr,
             "%ls: ERROR: Cannot read netconfig file '%s'\n",
             argv0,
             FILE_NETCONFIG);
-        return FALSE;
+        return false;
     }
 
     if (_waccess(nfs41_dg.cygwin_root, 00) != 0) {
         (void)fprintf(stderr, "%ls: ERROR: Cannot access Cygwin root '%ls'\n",
             argv0,
             nfs41_dg.cygwin_root);
-        return FALSE;
+        return false;
     }
 
-    return TRUE;
+    return true;
 }
 
 static void PrintUsage(const wchar_t *argv0)
@@ -306,7 +306,7 @@ void PrintVersion(void)
 }
 
 static
-bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
+bool parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
 {
     int i;
 
@@ -324,19 +324,19 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
             if ((!wcscmp(argv[i], L"-h")) ||
                 (!wcscmp(argv[i], L"--help"))) { /* help */
                 PrintUsage(argv[0]);
-                return FALSE;
+                return false;
             }
             else if ((!wcscmp(argv[i], L"-V")) ||
                 (!wcscmp(argv[i], L"--version"))) { /* version */
                 PrintVersion();
-                return FALSE;
+                return false;
             }
             else if (!wcscmp(argv[i], L"-d")) { /* debug level */
                 ++i;
                 if (i >= argc) {
                     (void)fprintf(stderr,
                         "%ls: Missing -d (debug level) value\n", argv[0]);
-                    return FALSE;
+                    return false;
                 }
                 errno = 0;
                 out->debug_level = wcstol(argv[i], NULL, 0);
@@ -344,7 +344,7 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
                     (void)fprintf(stderr,
                         "%ls: Invalid -d (debug level) value, errno=%d\n",
                         argv[0], errno);
-                    return FALSE;
+                    return false;
                 }
             }
 #ifdef _DEBUG
@@ -355,7 +355,7 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
                     (void)fprintf(stderr,
                         "%ls: Missing options for --crtdbgmem\n",
                         argv[0]);
-                    return FALSE;
+                    return false;
                 }
 
                 if (nfs41_dg.crtdbgmem_flags ==
@@ -392,7 +392,7 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
                     (void)fprintf(stderr,
                         "%ls: Missing options for %ls\n",
                         argv[0], argv[i-1]);
-                    return FALSE;
+                    return false;
                 }
 
                 const wchar_t *cygwin_root = argv[i];
@@ -402,7 +402,7 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
                     (void)fprintf(stderr,
                         "%ls: ERROR: %ls length >= MAX_PATH\n",
                         argv[0], argv[i-1]);
-                    return FALSE;
+                    return false;
                 }
 
                 (void)wcscpy(nfs41_dg.cygwin_root, cygwin_root);
@@ -418,7 +418,7 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
                     (void)fprintf(stderr,
                         "%ls: Missing value for num_worker_threads\n",
                         argv[0]);
-                    return FALSE;
+                    return false;
                 }
                 errno = 0;
                 nfs41_dg.num_worker_threads = wcstol(argv[i], NULL, 0);
@@ -426,20 +426,20 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
                     (void)fprintf(stderr,
                         "%ls: Invalid value for --num_worker_threads, errno=%d\n",
                         argv[0], (int)errno);
-                    return FALSE;
+                    return false;
                 }
                 if (nfs41_dg.num_worker_threads < 16) {
                     (void)fprintf(stderr,
                         "%ls: --numworkerthreads requires at least "
                         "16 worker threads\n", argv[0]);
-                    return FALSE;
+                    return false;
                 }
                 if (nfs41_dg.num_worker_threads >= MAX_NUM_THREADS) {
                     (void)fprintf(stderr, "%ls: "
                         "--numworkerthreads supports a maximum of "
                         "%d worker threads\n",
                         argv[0], MAX_NUM_THREADS);
-                    return FALSE;
+                    return false;
                 }
             }
             /*
@@ -453,13 +453,13 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
                 (void)fprintf(stderr,
                     "%ls: Unrecognized option '%ls'\n",
                     argv[0], argv[i]);
-                return FALSE;
+                return false;
             }
         }
         else {
             if (!wcscmp(argv[i], L"/?")) { /* help */
                 PrintUsage(argv[0]);
-                return FALSE;
+                return false;
             }
         }
     }
@@ -470,7 +470,7 @@ bool_t parse_cmdlineargs(int argc, wchar_t *argv[], nfsd_args *out)
 #endif /* NFS41_DRIVER_FEATURE_IDMAPPER_CYGWIN */
         "\n",
         out->debug_level);
-    return TRUE;
+    return true;
 }
 
 static void print_getaddrinfo(struct addrinfo *ptr)

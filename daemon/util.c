@@ -94,23 +94,23 @@ bool_t verify_write(
     if (verf->committed != UNSTABLE4) {
         *stable = verf->committed;
         DPRINTF(3, ("verify_write: committed to stable storage\n"));
-        return 1;
+        return TRUE;
     }
 
     if (*stable != UNSTABLE4) {
         memcpy(verf->expected, verf->verf, NFS4_VERIFIER_SIZE);
         *stable = UNSTABLE4;
         DPRINTF(3, ("verify_write: first unstable write, saving verifier\n"));
-        return 1;
+        return TRUE;
     }
 
     if (memcmp(verf->expected, verf->verf, NFS4_VERIFIER_SIZE) == 0) {
         DPRINTF(3, ("verify_write: verifier matches expected\n"));
-        return 1;
+        return TRUE;
     }
 
     DPRINTF(2, ("verify_write: verifier changed; writes have been lost!\n"));
-    return 0;
+    return FALSE;
 }
 
 bool_t verify_commit(
@@ -118,10 +118,10 @@ bool_t verify_commit(
 {
     if (memcmp(verf->expected, verf->verf, NFS4_VERIFIER_SIZE) == 0) {
         DPRINTF(3, ("verify_commit: verifier matches expected\n"));
-        return 1;
+        return TRUE;
     }
     DPRINTF(2, ("verify_commit: verifier changed; writes have been lost!\n"));
-    return 0;
+    return FALSE;
 }
 
 void get_file_time(
@@ -138,7 +138,7 @@ void get_nfs_time(
     file_time_to_nfs_time(&file_time, nfs_time);
 }
 
-bool_t multi_addr_find(
+bool multi_addr_find(
     IN const multi_addr4 *addrs,
     IN const netaddr4 *addr,
     OUT OPTIONAL uint32_t *index_out)
@@ -149,10 +149,10 @@ bool_t multi_addr_find(
         if (!strncmp(saddr->netid, addr->netid, NFS41_NETWORK_ID_LEN) &&
             !strncmp(saddr->uaddr, addr->uaddr, NFS41_UNIVERSAL_ADDR_LEN)) {
             if (index_out) *index_out = i;
-            return 1;
+            return true;
         }
     }
-    return 0;
+    return false;
 }
 
 int nfs_to_windows_error(int status, int default_error)
@@ -241,7 +241,7 @@ int map_symlink_errors(int status)
     }
 }
 
-bool_t next_component(
+bool next_component(
     IN const char *path,
     IN const char *path_end,
     OUT nfs41_component *component)
@@ -253,7 +253,7 @@ bool_t next_component(
     return component->len > 0;
 }
 
-bool_t last_component(
+bool last_component(
     IN const char *path,
     IN const char *path_end,
     OUT nfs41_component *component)
@@ -266,7 +266,7 @@ bool_t last_component(
     return component->len > 0;
 }
 
-bool_t is_last_component(
+bool is_last_component(
     IN const char *path,
     IN const char *path_end)
 {
@@ -541,9 +541,9 @@ BOOL subcmd_readcmdoutput(subcmd_popen_context *pinfo, char *buff, size_t buff_s
  * Returns |TRUE| if we didn't had to wait for another thread
  * to release the lock first.
  */
-bool_t waitSRWlock(PSRWLOCK srwlock)
+bool waitSRWlock(PSRWLOCK srwlock)
 {
-    bool_t srw_locked;
+    bool srw_locked;
 
     /* Check whether something is still using the lock */
     srw_locked = TryAcquireSRWLockExclusive(srwlock);
@@ -565,9 +565,9 @@ bool_t waitSRWlock(PSRWLOCK srwlock)
  * Returns |TRUE| if we didn't had to wait for another thread
  * to release the lock first.
  */
-bool_t waitcriticalsection(LPCRITICAL_SECTION cs)
+bool waitcriticalsection(LPCRITICAL_SECTION cs)
 {
-    bool_t cs_locked;
+    bool cs_locked;
 
     /* Check whether something is still using the critical section */
     cs_locked = TryEnterCriticalSection(cs);
