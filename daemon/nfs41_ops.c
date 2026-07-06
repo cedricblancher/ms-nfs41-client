@@ -1408,8 +1408,7 @@ int nfs41_superblock_getattr(
          */
         eprintf("nfs41_superblock_getattr: "
             "Unexpected NFS error NFS4ERR_NOFILEHANDLE while probing "
-            "named attr support, assuming FS supports NFS named attributes\n",
-            nfs_error_string(status));
+            "named attr support, assuming FS supports NFS named attributes\n");
         /* fall-through */
 #endif /* WORKAROUND_FOR_FREEBSD_NAMEDATTRSUPPORT_DETECTION_NFS4ERR_NOFILEHANDLE */
     case NFS4ERR_NOENT:
