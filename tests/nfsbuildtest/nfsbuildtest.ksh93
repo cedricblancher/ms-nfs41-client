@@ -76,6 +76,11 @@
 #   $ ksh93 nfsbuildtest.ksh93 simplenfs createcache
 #   $ ksh93 nfsbuildtest.ksh93 simplenfs build
 #
+# - build Cygwin 64bit runtime:
+#   $ ksh93 nfsbuildtest.ksh93 cygwin_x86_64 clean
+#   $ ksh93 nfsbuildtest.ksh93 cygwin_x86_64 createcache
+#   $ ksh93 nfsbuildtest.ksh93 cygwin_x86_64 build
+#
 
 function gcc_createcache
 {
@@ -1427,6 +1432,155 @@ function simplenfs_clean
 	return 0
 }
 
+function cygwin_x86_64_createcache
+{
+	set -o xtrace
+	set -o errexit
+	set -o nounset
+
+	# use native Windows git
+	typeset -r gitcmd="/usr/bin/git"
+
+	if [[ ! -x "$gitcmd" ]] ; then
+		print -u2 -f $"ERROR: git cmd %q not found.\n" "$gitcmd"
+		return 1
+	fi
+
+	mkdir -p '../gitbundles'
+	rm -f '../gitbundles/newlib-cygwin'
+
+	"${gitcmd}" -c checkout.workers=16 clone 'git://cygwin.com/git/newlib-cygwin.git'
+	cd 'newlib-cygwin'
+	"${gitcmd}" config --global --add safe.directory "$PWD"
+	"${gitcmd}" bundle create '../gitbundles/newlib-cygwin.bundle' --all
+	"${gitcmd}" config --global --unset safe.directory "$PWD"
+	cd ..
+	rm -Rf 'newlib-cygwin'
+
+	return 0
+}
+
+function cygwin_x86_64_build
+{
+	set -o xtrace
+	set -o errexit
+	set -o nounset
+
+	typeset subcmd="$1"
+	integer build_parallel
+
+	# use native Windows git
+	typeset -r gitcmd="/usr/bin/git"
+
+	if [[ ! -x "$gitcmd" ]] ; then
+		print -u2 -f $"ERROR: git cmd %q not found.\n" "$gitcmd"
+		return 1
+	fi
+
+	#
+	# build config
+	#
+	compound gitdata=(
+		typeset url='git://cygwin.com/git/newlib-cygwin.git'
+		# use fixed git tag, so build times are compareable
+		typeset tag='cygwin-3_6-branch'
+	)
+
+	#
+	# temp dir setup
+	#
+
+	tmpdir="$PWD/tmpdir"
+	mkdir -p "$tmpdir"
+	chmod a+rwxt "$tmpdir"
+	if [[ -d "$tmpdir" && -w "$tmpdir" ]] ; then
+		printf $"#### Using temp dir %q\n" "$tmpdir"
+		export TMPDIR="$tmpdir"
+		export TEMP="$tmpdir"
+		export TMP="$tmpdir"
+	else
+		print -u2 -f $"ERROR: TEMPDIR %q on NFS filesystem does not work.\n" "$tmpdir"
+		return 1
+	fi
+
+	#
+	# print user info
+	#
+	id -a
+	pwd
+
+	#
+	# source checkout
+	#
+
+	if [[ -f '../gitbundles/newlib-cygwin.bundle' ]] ; then
+		# Use local bundle as cache,
+		# so build times only depend on local filesystem performance
+		# and not HTTPS speed
+		time "${gitcmd}" -c checkout.workers=16 clone -b "${gitdata.tag}" --single-branch '../gitbundles/newlib-cygwin.bundle'
+	else
+		time "${gitcmd}" -c checkout.workers=16 clone -b "${gitdata.tag}" --single-branch "${gitdata.url}"
+	fi
+
+	typeset cygbuildbase="$PWD"
+
+	cd "$PWD/newlib-cygwin/"
+
+	# make sure git commands (like git "describe", "fsck", ...) work (only needed for Cygwin git)
+	"${gitcmd}" config --global --add safe.directory "$PWD"
+
+	# use git fsck as filesystem test
+	time "${gitcmd}" fsck
+
+	#
+	# setup
+	#
+	mkdir "${cygbuildbase}/testinstallroot"
+	mkdir "${cygbuildbase}/builddir"
+
+	#
+	# patch sources and configure build
+	#
+	# generate Cygwin configure
+	cd "${cygbuildbase}/newlib-cygwin/winsup/"
+	./autogen.sh
+
+	# patch all "configure" scripts" and remove pax from am_cv_prog_tar_ustar
+	# list - we pick-up /usr/bin/pax it will interactively ask
+	# 'ATTENTION! pax archive volume change required.\nReady for archive
+	# volume: 1\nInput archive name or "." to quit pax.'
+	(set -o xtrace ; sed -i "s/_am_tools='gnutar plaintar pax cpio none'/_am_tools='gnutar plaintar cpio none'/g" $(find "${cygbuildbase}/newlib-cygwin" -name 'configure') )
+
+	#
+	# configure&&build cygwin
+	#
+	# (see https://www.cygwin.com/faq/faq.html#faq.programming.building-cygwin
+	# for the original Cygwin build instructions)
+	#
+
+
+	# run newlib configure and build
+	cd "${cygbuildbase}/builddir"
+	/bin/bash "${cygbuildbase}/newlib-cygwin/configure" --prefix="${cygbuildbase}/testinstallroot"
+	time nice make -j64 --load-average 64
+
+	time make install
+
+	echo $"#Done."
+
+	return 0
+}
+
+function cygwin_x86_64_clean
+{
+	set -o xtrace
+	set -o errexit
+	set -o nounset
+
+	rm -Rf 'newlib-cygwin'
+	return 0
+}
+
 
 #
 # get_cpv_cygwin_version - get cygwin version as compound var
@@ -1707,6 +1861,39 @@ function main
 			;;
 		'simplenfs_clean')
 			simplenfs_clean
+			return $?
+			;;
+		'cygwin_x86_64_createcache')
+			is_toolkit_pkg_installed itp 'git' || (( errc++ ))
+			cygwin_x86_64_createcache
+			return $?
+			;;
+		'cygwin_x86_64_build'*)
+			is_toolkit_pkg_installed itp 'gcc-g++' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'make' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'automake' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'autoconf' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'git' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'perl' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'cocom' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'patch' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'gettext-devel' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'libiconv-devel' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'libzstd-devel' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'zlib-devel' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'mingw64-x86_64-gcc-g++' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'mingw64-x86_64-zlib' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'dblatex' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'docbook2X' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'docbook-xml45' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'docbook-xsl' || (( errc++ ))
+			is_toolkit_pkg_installed itp 'xmlto' || (( errc++ ))
+			(( errc > 0 )) && return 1
+			cygwin_x86_64_build "${subcmd}"
+			return $?
+			;;
+		'cygwin_x86_64_clean')
+			cygwin_x86_64_clean
 			return $?
 			;;
 		*)
