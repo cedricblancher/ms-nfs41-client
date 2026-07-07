@@ -42,14 +42,22 @@
 
 bool str_has_posixshell_specialchars(const char *restrict s)
 {
-    const char posixshell_specialchars[] = "!|&;<>()$`\\\"' \t\n*?[]";
+    /*
+     * POSIX shell special characters. The IFS characters $' \t\n'
+     * are NOT listed, as these can be valid variable content
+     */
+    const char posixshell_specialchars[] = "!|&;<>()$`\\\"'*?[]";
 
     return (strpbrk(s, posixshell_specialchars) != NULL)?true:false;
 }
 
 bool str_has_win32cmdexe_specialchars(const char *restrict s)
 {
-    const char win32cmdexe_specialchars[] = "&|<>()^%!\" \t\n";
+    /*
+     * Win32 cmd.exe special characters. Characters $' \t\n'
+     * are NOT listed, as these can be valid variable content
+     */
+    const char win32cmdexe_specialchars[] = "&|<>()^%!\"";
 
     return (strpbrk(s, win32cmdexe_specialchars) != NULL)?true:false;
 }
