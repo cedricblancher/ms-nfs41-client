@@ -83,7 +83,7 @@ bool init_cygwin_idmapper_globals(const wchar_t *argv0)
         wchar_t pathbuf[MAX_PATH];
 
         for (i = 0 ; i < NUM_IDMAPSCRIPTPATHS ;  i++) {
-            (void)swprintf(pathbuf, sizeof(pathbuf),
+            (void)swprintf(pathbuf, MAX_PATH,
                 idmapscriptpath[i].win32path,
                 nfs41_dg.cygwin_root);
             if (_waccess(pathbuf, 04) == 0) {
