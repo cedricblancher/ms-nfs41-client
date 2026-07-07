@@ -810,7 +810,7 @@ function dispatch_lookup
 	fi
 
 	if [[ ! -v COMPUTERNAME ]] ; then
-		printf -u2 -f $"ERROR: COMPUTERNAME var not set\n"
+		print -u2 -f $"ERROR: COMPUTERNAME var not set\n"
 		export COMPUTERNAME="$(uname -n | tr '[:lower:]' '[:upper:]')"
 		return 1
 	fi
