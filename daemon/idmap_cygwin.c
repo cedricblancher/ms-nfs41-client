@@ -234,21 +234,38 @@ int cygwin_getent_passwd(
         else if (!strcmp("localuid", cnv_cur->cpv_name)) {
             errno = 0;
             localuid = strtol(cnv_cur->cpv_value, NULL, 10);
-            if (errno != 0)
+            if (errno != 0) {
+                eprintf("cygwin_getent_passwd(mode='%s',cfgname='%s',name='%s'): "
+                    "localuid value='%s' parsing error\n",
+                    mode, cfgname, name, cnv_cur->cpv_value);
                 goto fail;
+            }
         }
         else if (!strcmp("nfsuid", cnv_cur->cpv_name)) {
             errno = 0;
             nfsuid = strtol(cnv_cur->cpv_value, NULL, 10);
-            if (errno != 0)
+            if (errno != 0) {
+                eprintf("cygwin_getent_passwd(mode='%s',cfgname='%s',name='%s'): "
+                    "nfsuid value='%s' parsing error\n",
+                    mode, cfgname, name, cnv_cur->cpv_value);
                 goto fail;
+            }
         }
     }
 
-    if (localaccountname == NULL)
+    if (localaccountname == NULL) {
+        eprintf("cygwin_getent_passwd(mode='%s',cfgname='%s',name='%s'): "
+            "'localaccountname' cpv var missing\n",
+            mode, cfgname, name);
         goto fail;
-    if (nfsowner == NULL)
+    }
+
+    if (nfsowner == NULL) {
+        eprintf("cygwin_getent_passwd(mode='%s',cfgname='%s',name='%s'): "
+            "'nfsowner' cpv var missing\n",
+            mode, cfgname, name);
         goto fail;
+    }
 
     if (strlen(localaccountname) >= UTF8_PRINCIPALLEN) {
         eprintf("cygwin_getent_passwd(mode='%s',cfgname='%s',name='%s'): "
@@ -476,21 +493,38 @@ int cygwin_getent_group(
         else if (!strcmp("localgid", cnv_cur->cpv_name)) {
             errno = 0;
             localgid = strtol(cnv_cur->cpv_value, NULL, 10);
-            if (errno != 0)
+            if (errno != 0) {
+                eprintf("cygwin_getent_group(mode='%s',cfgname='%s',name='%s'): "
+                    "localgid value='%s' parsing error\n",
+                    mode, cfgname, name, cnv_cur->cpv_value);
                 goto fail;
+            }
         }
         else if (!strcmp("nfsgid", cnv_cur->cpv_name)) {
             errno = 0;
             nfsgid = strtol(cnv_cur->cpv_value, NULL, 10);
-            if (errno != 0)
+            if (errno != 0) {
+                eprintf("cygwin_getent_group(mode='%s',cfgname='%s',name='%s'): "
+                    "nfsgid value='%s' parsing error\n",
+                    mode, cfgname, name, cnv_cur->cpv_value);
                 goto fail;
+            }
         }
     }
 
-    if (localgroupname == NULL)
+    if (localgroupname == NULL) {
+        eprintf("cygwin_getent_group(mode='%s',cfgname='%s',name='%s'): "
+            "'localgroupname' cpv var missing\n",
+            mode, cfgname, name);
         goto fail;
-    if (nfsownergroup == NULL)
+    }
+
+    if (nfsownergroup == NULL) {
+        eprintf("cygwin_getent_group(mode='%s',cfgname='%s',name='%s'): "
+            "'nfsownergroup' cpv var missing\n",
+            mode, cfgname, name);
         goto fail;
+    }
 
     if (strlen(localgroupname) >= UTF8_PRINCIPALLEN) {
         eprintf("cygwin_getent_group(mode='%s',cfgname='%s',name='%s'): "
