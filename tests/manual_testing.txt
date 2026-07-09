@@ -462,6 +462,7 @@ WINHOST1:~$ powershell -Command 'New-LocalGroup -Name "cygwingrp_$([char]0x00F6)
 WINHOST1:~$ net localgroup 'cygwingrp withspace5' /add
 
 # add user "roland_mainz" to both new groups
+# (Note that the idmapper will translate Win32 "roland_mainz" to NFS server "rmainz")
 WINHOST1:~$ net localgroup cygwingrp1 roland_mainz /add
 WINHOST1:~$ net localgroup cygwingrp2 roland_mainz /add
 WINHOST1:~$ powershell -Command 'Add-LocalGroupMember -Group "cygwingrp_$([char]0x00F6)$([char]0x00E4)$([char]0x00FC)_4" -Member roland_mainz'
@@ -484,10 +485,10 @@ root@DERFWNB4966:~# groupadd -g 197612 cygwingrp2
 root@DERFWNB4966:~# printf "cygwingrp_\u00F6\u00E4\u00FC_4:x:197616:\n" >>'/etc/group'
 # the idmapper script will convert Win32 'cygwingrp withspace5' to NFS server 'cygwingrp_withspace5'
 root@DERFWNB4966:~# groupadd -g 197618 cygwingrp_withspace5
-root@DERFWNB4966:~# usermod -a -G cygwingrp1 roland_mainz
-root@DERFWNB4966:~# usermod -a -G cygwingrp2 roland_mainz
-# user "roland_mainz" must be manually added to group "cygwingrp2_<oe><ae<ue>_4"
-root@DERFWNB4966:~# usermod -a -G cygwingrp_withspace5 roland_mainz
+root@DERFWNB4966:~# usermod -a -G cygwingrp1 rmainz
+root@DERFWNB4966:~# usermod -a -G cygwingrp2 rmainz
+# user "rmainz" must be manually added to group "cygwingrp2_<oe><ae<ue>_4"
+root@DERFWNB4966:~# usermod -a -G cygwingrp_withspace5 rmainz
 ---- snip ---
 
 #
