@@ -1,9 +1,10 @@
-# prototype fix for Cygwin DLL to handle uids/gids correctly on
-# NFSv4 filesystems.
-# Without LDAP they use Cygwin or UWIN to obtain the uid/gid for files,
-# which breaks the assumptions in |fhandler_base::fstat_by_nfs_ea()|
-# and causes it to map all uid/gid values into the Unix_User+/Unix_Group SID
-# range
+# Prototype fix for Cygwin DLL to handle uids/gids correctly on
+# NFSv4 filesystems, which usually use an idmapper to map
+# Win32 user&group names to NFS server account names.
+# Without LDAP the NFSv4 idmappers usually use Cygwin or UWIN to obtain the
+# uid/gid for files, which breaks the assumptions in
+# |fhandler_base::fstat_by_nfs_ea()| and causes it to map all uid/gid values
+# into the Unix_User+<uid>/Unix_Group+<gid> SID range
 diff --git a/winsup/cygwin/fhandler/disk_file.cc b/winsup/cygwin/fhandler/disk_file.cc
 index d54d3747e..92a54d9db 100644
 --- a/winsup/cygwin/fhandler/disk_file.cc
