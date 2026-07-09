@@ -279,7 +279,9 @@ pw useradd -n ced -u 197608 -g None -G None,ced -m -s /bin/sh
 # later add more groups, and add user "ced" as member:
 pw groupadd group -n cygwingrp1 -g 197611
 pw groupadd group -n cygwingrp2 -g 197612
+pw groupadd group -n cygwingrp_withspace5 -g 197618
 pw groupmod cygwingrp1 -m ced
 pw groupmod cygwingrp2 -m ced
+pw groupmod cygwingrp_withspace5 -m ced
 
 # EOF.

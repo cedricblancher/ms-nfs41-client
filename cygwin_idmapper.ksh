@@ -479,6 +479,15 @@ function setup_site_accounts_lab_example1
 			nfsownergroup="mwenzel@${c.idmap_config.nfsdomain}"
 			nfsgid=8239
 		)
+		# "cygwingrp_withspace5" - example for group name wih <space>,
+		# this entry converts Win32 "cygwingrp withspace5" to NFS server
+		# "cygwingrp_withspace5"
+		["cygwingrp_withspace5"]=(
+			localgroupname="cygwingrp withspace5@${COMPUTERNAME}"
+			localgid=197618
+			nfsownergroup="cygwingrp_withspace5@${c.idmap_config.nfsdomain}"
+			nfsgid=197618
+		)
 	)
 
 	return 0
