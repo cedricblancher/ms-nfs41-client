@@ -1076,9 +1076,6 @@ function main
 	vsdiagnostics_path='/cygdrive/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Team Tools/DiagnosticsHub/Collector/'
 	PATH+=":${vsdiagnostics_path}"
 
-	# my own path to DebugView
-	PATH+=':/cygdrive/c/Users/roland_mainz/download/DebugView'
-
 	case "$cmd" in
 		'install' | 'devinstall')
 			require_cmd 'regtool.exe' || (( numerr++ ))
