@@ -71,9 +71,13 @@ bool get_token_user_name(HANDLE tok, char *out_buffer)
 
     if (!lookupprincipalsidutf8(NULL, pusid, out_buffer, &namesize,
         &name_use)) {
+        DWORD lasterr = GetLastError();
+        char sidbuff[256];
+        (void)sid2string(pusid, sidbuff, sizeof(sidbuff));
         eprintf("get_token_user_name: "
-            "lookupprincipalsidutf8() failed, status=%d\n",
-            (int)GetLastError());
+            "lookupprincipalsidutf8() failed for pusid='%s', status=%d\n",
+            sidbuff, (int)lasterr);
+        SetLastError(lasterr);
         return false;
     }
 
@@ -113,9 +117,13 @@ bool get_token_primarygroup_name(HANDLE tok, char *out_buffer)
 
     if (!lookupprincipalsidutf8(NULL, pgsid, out_buffer, &namesize,
         &name_use)) {
+        DWORD lasterr = GetLastError();
+        char sidbuff[256];
+        (void)sid2string(pgsid, sidbuff, sizeof(sidbuff));
         eprintf("get_token_primarygroup_name: "
-            "lookupprincipalsidutf8() failed, status=%d\n",
-            (int)GetLastError());
+            "lookupprincipalsidutf8() failed for pgsid='%s', status=%d\n",
+            sidbuff, (int)lasterr);
+        SetLastError(lasterr);
         return false;
     }
 
