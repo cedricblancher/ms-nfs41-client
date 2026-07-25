@@ -867,7 +867,7 @@ int map_sid2nfs4ace_who(
     /* |who_buf| needs space for user+domain */
     char who_buf[UTF8_PRINCIPALLEN+1];
     DWORD who_size = sizeof(who_buf);
-    LPSTR sidstr = NULL;
+    char sidstrbuff[256];
 
     DPRINTF(ACLLVL2, ("--> map_sid2nfs4ace_who("
         "sid=0x%p,owner_sid=0x%p, group_sid=0x%p)\n",
@@ -924,9 +924,9 @@ int map_sid2nfs4ace_who(
         goto out;
     }
 
-    if (!ConvertSidToStringSidA(sid, &sidstr)) {
+    if (!sid2string(sid, sidstrbuff, sizeof(sidstrbuff))) {
         status = GetLastError();
-        eprintf("map_sid2nfs4ace_who: ConvertSidToStringSidA() "
+        eprintf("map_sid2nfs4ace_who: sid2string() "
             "failed, error=%d\n", status);
         goto out;
     }
@@ -938,7 +938,7 @@ int map_sid2nfs4ace_who(
             "LookupAccountSid(sidtostr(sid)='%s', who_buf='%s', "
             "who_size=%d) "
             "returned success\n",
-            sidstr, who_buf, who_size));
+            sidstrbuff, who_buf, who_size));
         idmapcache_entry *ie;
 
 #ifdef NFS41_DRIVER_WS2022_HACKS
@@ -1031,9 +1031,9 @@ do_idmap_name:
         status = GetLastError();
 
         DPRINTF(ACLLVL2, ("map_sid2nfs4ace_who: "
-            "LookupAccountSid(sidtostr(sid)='%s', who_size=%d "
+            "LookupAccountSid(sid='%s', who_size=%d "
             "returned failure, status=%d\n",
-            sidstr, who_size, status));
+            sidstrbuff, who_size, status));
 
         /*
          * No SID to local account mapping. Can happen for some system
@@ -1081,7 +1081,7 @@ do_idmap_name:
                     eprintf("map_sid2nfs4ace_who: "
                         "unixuser_sid2uid(sid='%s',unixuser_uid=%d) "
                         "returned no mapping.\n",
-                        sidstr, (int)unixuser_uid);
+                        sidstrbuff, (int)unixuser_uid);
                     goto err_none_mapped;
                 }
 
@@ -1107,21 +1107,21 @@ do_idmap_name:
                     eprintf("map_sid2nfs4ace_who: "
                         "unixgroup_sid2gid(sid='%s',unixgroup_gid=%d) "
                         "returned no mapping.\n",
-                        sidstr, (int)unixgroup_gid);
+                        sidstrbuff, (int)unixgroup_gid);
                     goto err_none_mapped;
                 }
 
                 eprintf("map_sid2nfs4ace_who: lookupprincipalsidutf8() "
                     "returned ERROR_NONE_MAPPED+no "
-                    "Unix_@(User|Group)+ mapping for sidstr='%s'\n",
-                    sidstr);
+                    "Unix_@(User|Group)+ mapping for sid='%s'\n",
+                    sidstrbuff);
 err_none_mapped:
                 status = ERROR_NONE_MAPPED;
 #else
                 DPRINTF(ACLLVL2,
                     ("map_sid2nfs4ace_who: lookupprincipalsidutf8() "
-                    "returned ERROR_NONE_MAPPED for sidstr='%s'\n",
-                    sidstr));
+                    "returned ERROR_NONE_MAPPED for sid='%s'\n",
+                    sidstrbuff));
                 goto out;
 #endif /* NFS41_DRIVER_FEATURE_MAP_UNMAPPED_USER_TO_UNIXUSER_SID */
 
@@ -1130,14 +1130,14 @@ err_none_mapped:
             case ERROR_NO_SUCH_GROUP:
                 eprintf("map_sid2nfs4ace_who: lookupprincipalsidutf8() "
                     "returned ERROR_NO_SUCH_@(USER|GROUP) for "
-                    "sidstr='%s'\n",
-                    sidstr);
+                    "sid='%s'\n",
+                    sidstrbuff);
                 goto out;
             default:
                 eprintf("map_sid2nfs4ace_who: Internal error, "
                     "lookupprincipalsidutf8() returned unexpected ERROR_%d "
-                    "for sidstr='%s'\n",
-                    status, sidstr);
+                    "for sid='%s'\n",
+                    status, sidstrbuff);
                 status = ERROR_INTERNAL_ERROR;
                 goto out;
         }
@@ -1161,8 +1161,7 @@ out:
             *sid_type_out = sid_type;
         }
     }
-    if (sidstr)
-        LocalFree(sidstr);
+
     return status;
 }
 

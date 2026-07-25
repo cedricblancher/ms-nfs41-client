@@ -713,12 +713,13 @@ out:
                 "status=%d\n", query, win32name, status);
         }
         else {
-            PSTR sidstr = NULL;
+            char sidstrbuff[256];
+            char *sidstr = sidstrbuff;
             char errsidstrbuf[128];
 
-            if (!ConvertSidToStringSidA(*sid, &sidstr)) {
+            if (!sid2string(*sid, sidstrbuff, sizeof(sidstrbuff))) {
                 (void)snprintf(errsidstrbuf, sizeof(errsidstrbuf),
-                    "<ConvertSidToStringSidA() failed, "
+                    "<sid2string() failed, "
                     "GetLastError()=%d>", (int)GetLastError());
                 sidstr = errsidstrbuf;
             }
@@ -726,9 +727,6 @@ out:
             dprintf_out("<-- map_nfs4servername_2_sid(query=0x%x,win32name='%s'): "
                 "status=%d sidstr='%s' *sid_len=%d\n",
                 query, win32name, status, sidstr, *sid_len);
-
-            if (sidstr && (sidstr != errsidstrbuf))
-                LocalFree(sidstr);
         }
     }
 

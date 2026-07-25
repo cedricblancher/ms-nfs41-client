@@ -442,17 +442,16 @@ void print_file_id_both_dir_info(int level, const FILE_ID_BOTH_DIR_INFORMATION *
 
 void print_sid(const char *label, PSID sid)
 {
-    PSTR sidstr = NULL;
+    char sidstrbuff[256];
 
-    if (ConvertSidToStringSidA(sid, &sidstr)) {
-        dprintf_out("%s=SID('%s')\n", label, sidstr);
-        LocalFree(sidstr);
+    if (sid2string(sid, sidstrbuff, sizeof(sidstrbuff))) {
+        dprintf_out("%s=SID('%s')\n", label, sidstrbuff);
     }
     else {
         int status;
 
         status = GetLastError();
-        dprintf_out("%s=<ConvertSidToStringSidA() failed error=%d>\n",
+        dprintf_out("%s=<sid2string() failed error=%d>\n",
             label, status);
     }
 }
