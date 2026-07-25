@@ -105,4 +105,9 @@ BOOL lookupprincipalsidutf8(
     LPDWORD restrict pNameSize,
     PSID_NAME_USE restrict peUse);
 
+bool
+sid2string(
+    IN PSID Sid,
+    OUT char *restrict Buffer,
+    IN size_t BufferSize);
 #endif /* !__NFS41_DAEMON_SID_H */

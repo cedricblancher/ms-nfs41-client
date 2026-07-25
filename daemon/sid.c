@@ -1159,3 +1159,83 @@ BOOL lookupprincipalsidutf8(
     *pNameSize = (DWORD)written;
     return TRUE;
 }
+
+
+bool
+sid2string(
+    IN PSID Sid,
+    OUT char *restrict Buffer,
+    IN size_t BufferSize)
+{
+    PSID_IDENTIFIER_AUTHORITY authority;
+    PUCHAR subAuthorityCount;
+    ULONGLONG identifierAuthority;
+    size_t used;
+    int n;
+    DWORD i;
+
+    Buffer[0] = '\0';
+
+    if (!IsValidSid(Sid)) {
+        SetLastError(ERROR_INVALID_SID);
+        return false;
+    }
+
+    authority = GetSidIdentifierAuthority(Sid);
+    subAuthorityCount = GetSidSubAuthorityCount(Sid);
+
+    identifierAuthority =
+        ((ULONGLONG)authority->Value[0] << 40) |
+        ((ULONGLONG)authority->Value[1] << 32) |
+        ((ULONGLONG)authority->Value[2] << 24) |
+        ((ULONGLONG)authority->Value[3] << 16) |
+        ((ULONGLONG)authority->Value[4] << 8)  |
+        ((ULONGLONG)authority->Value[5]);
+
+    if (identifierAuthority <= 0xFFFFFFFFULL) {
+        n = snprintf(
+            Buffer,
+            BufferSize,
+            "S-%u-%llu",
+            (unsigned int)SID_REVISION,
+            (unsigned long long)identifierAuthority);
+    } else {
+        n = snprintf(
+            Buffer,
+            BufferSize,
+            "S-%u-0x%012llX",
+            (unsigned int)SID_REVISION,
+            (unsigned long long)identifierAuthority);
+    }
+
+    if ((n < 0) || ((size_t)n >= BufferSize)) {
+        Buffer[0] = '\0';
+        SetLastError(ERROR_INSUFFICIENT_BUFFER);
+        return false;
+    }
+
+    used = (size_t)n;
+
+    for (i = 0 ; i < *subAuthorityCount ; i++) {
+        DWORD subAuthority;
+
+        subAuthority = *GetSidSubAuthority(Sid, i);
+
+        n = snprintf(
+            Buffer + used,
+            BufferSize - used,
+            "-%lu",
+            (unsigned long)subAuthority
+        );
+
+        if ((n < 0) || ((size_t)n >= BufferSize - used)) {
+            Buffer[0] = '\0';
+            SetLastError(ERROR_INSUFFICIENT_BUFFER);
+            return false;
+        }
+
+        used += (size_t)n;
+    }
+
+    return true;
+}
