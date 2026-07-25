@@ -1874,6 +1874,7 @@ int nfs41_idmap_create(
     context->groupcache = idmapcache_context_create(context->config.cache_ttl);
 
     if ((context->usercache == NULL) || (context->groupcache == NULL)) {
+        status = ERROR_NOT_ENOUGH_MEMORY;
         eprintf("nfs41_idmap_create(configname='%s'): "
             "Cannot create idmapcache\n", context->config.configname);
         goto out_err_free;
@@ -1889,6 +1890,7 @@ int nfs41_idmap_create(
     context->well_known_lgrouplist =
         build_well_known_localised_nfs_grouplist(context);
     if (context->well_known_lgrouplist == NULL) {
+        status = ERROR_INTERNAL_ERROR;
         eprintf("nfs41_idmap_create(configname='%s'): "
             "build_well_known_localised_nfs_grouplist() failed\n",
             context->config.configname);
