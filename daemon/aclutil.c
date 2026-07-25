@@ -165,8 +165,13 @@ char *build_well_known_localised_nfs_grouplist(struct idmap_context *context)
     for (size_t i = 0; i < num_sids; i++) {
         char *acc = get_account_from_sid(principal_buf, group_sids[i]);
 
-        if (acc == NULL)
+        if (acc == NULL) {
+            DPRINTF(0,
+                ("build_well_known_localised_nfs_grouplist: "
+                "Cannot get account name for WELL_KNOWN_SID_TYPE=%d, lasterr=%d\n",
+                (int)group_sids[i], (int)GetLastError()));
             continue;
+        }
 
         idmapcache_entry *ie;
         ie = nfs41_idmap_group_lookup_by_win32name(context, acc);
