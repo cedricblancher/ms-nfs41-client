@@ -687,6 +687,8 @@ void set_nfs_daemon_privileges(void)
     }
 
     (void)set_token_privilege(proc_token,
+        "SeIncreaseBasePriorityPrivilege", true);
+    (void)set_token_privilege(proc_token,
         "SeImpersonatePrivilege", true);
     (void)set_token_privilege(proc_token,
         "SeDelegateSessionUserImpersonatePrivilege", true);
