@@ -77,19 +77,29 @@ function is_windows_64bit
 	fi
 }
 
-function print_secureboot_status
+function isuefisecurebootenabled
 {
 	typeset -r uefisecurebootenabled_regfile='/proc/registry/HKEY_LOCAL_MACHINE/SYSTEM/CurrentControlSet/Control/SecureBoot/State/UEFISecureBootEnabled'
 
 	if [[ ! -r "${uefisecurebootenabled_regfile}" ]] ; then
 		printf $"%s: '%q' not found, cannot determinate SecureBoot status.\n" "$0" "${uefisecurebootenabled_regfile}" 1>&2
-		return 0
+		return 2
 	fi
 
-	if [[ "$(od -t x1 "${uefisecurebootenabled_regfile}")" == "0000000 00 00 00 00"* ]] ; then
-		printf $"# SecureBoot disabled, nfs41_driver kernel module should work\n"
+	# match ere "[[:space:]]*1" because GNU od(1) can add leading <space>
+	if [[ "$(od -An -t u4 <"${uefisecurebootenabled_regfile}")" =~ [[:space:]]*1 ]] ; then
+		return 0
 	else
+		return 1
+	fi
+}
+
+function print_secureboot_status
+{
+	if isuefisecurebootenabled ; then
 		printf $"#\n# WARNING:\n# SecureBoot enabled, nfs41_driver kernel module might not work\n# if not signed for SecureBoot\n#\n"
+	else
+		printf $"# SecureBoot disabled, an unsigned nfs41_driver kernel module should work\n"
 	fi
 
 	return 0
@@ -137,7 +147,13 @@ function nfsclient_install
 
 	typeset cmd="$1"
 
-	typeset use_secureboot=false
+	typeset use_secureboot
+
+	if isuefisecurebootenabled ; then
+		use_secureboot=true
+	else
+		use_secureboot=false
+	fi
 
 	if is_service_installed 'ms-nfs41-client-service' ; then
 		if ! is_service_stopped 'ms-nfs41-client-service' ; then
