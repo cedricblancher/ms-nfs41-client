@@ -160,7 +160,7 @@ function nfsclient_install
 			set -o xtrace # make message below more readable
 			printf $"ms-nfs41-client-service is still running.\n"
 			printf $"Please disable the service via $ /sbin/msnfs41client disableautostartservices #,\n"
-			printf $"reboot and then install the new version of ms-nfs41-client via $ /sbin/msnfs41client install #\n"
+			printf $"reboot and then install the new version of ms-nfs41-client via $ /sbin/msnfs41client %s #\n" "${cmd}"
 			return 1
 		fi
 	fi
