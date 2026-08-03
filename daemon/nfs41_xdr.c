@@ -80,8 +80,12 @@ bool_t xdr_bitmap4(
         for (i = 0; i < bitmap->count; i++)
             if (!xdr_uint32_t(xdr, &bitmap->arr[i]))
                 return FALSE;
-    } else
+    } else if (xdr->x_op == XDR_FREE) {
+        return TRUE;
+    }
+    else {
         return FALSE;
+    }
 
     return TRUE;
 }
