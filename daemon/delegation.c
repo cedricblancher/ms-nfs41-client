@@ -780,6 +780,164 @@ out_deleg:
 }
 
 
+static bool delegation_recall_any_match(
+    IN const nfs41_delegation_state *deleg,
+    IN bool recall_read_delegs,
+    IN bool recall_write_delegs)
+{
+    switch (deleg->state.type) {
+    case OPEN_DELEGATE_READ:
+        return recall_read_delegs;
+    case OPEN_DELEGATE_WRITE:
+        return recall_write_delegs;
+    default:
+        return FALSE;
+    }
+}
+
+int nfs41_client_delegation_recall_any(
+    IN nfs41_client *client,
+    IN uint32_t objects_to_keep,
+    IN bool recall_read_delegs,
+    IN bool recall_write_delegs)
+{
+    struct list_entry *entry;
+    nfs41_delegation_state **delegations = NULL;
+    uint32_t delegation_count = 0, recall_count = 0;
+    uint32_t selected = 0, i;
+    int status = NFS4_OK;
+
+    DPRINTF(0/*DGLVL*/,
+        ("--> nfs41_client_delegation_recall_any"
+        "(objects_to_keep=%ld, recall_read_delegs=%d, recall_write_delegs=%d)\n",
+        (long)objects_to_keep,
+        (int)recall_read_delegs,
+        (int)recall_write_delegs));
+
+    if (!recall_read_delegs && !recall_write_delegs)
+        goto out;
+
+    EnterCriticalSection(&client->state.lock);
+    list_for_each(entry, &client->state.delegations) {
+        nfs41_delegation_state *deleg = deleg_entry(entry);
+        bool match;
+
+        AcquireSRWLockShared(&deleg->lock);
+        match = (deleg->status == DELEGATION_GRANTED) &&
+            delegation_recall_any_match(deleg,
+                recall_read_delegs, recall_write_delegs);
+        ReleaseSRWLockShared(&deleg->lock);
+
+        if (match)
+            delegation_count++;
+    }
+    LeaveCriticalSection(&client->state.lock);
+
+    if (delegation_count <= objects_to_keep)
+        goto out;
+
+    recall_count = delegation_count - objects_to_keep;
+    delegations = calloc(recall_count, sizeof(nfs41_delegation_state *));
+    if (delegations == NULL) {
+        status = NFS4ERR_SERVERFAULT;
+        eprintf("nfs41_client_delegation_recall_any: "
+            "failed to allocate delegation list\n");
+        goto out;
+    }
+
+    /*
+     * Select the least recently used matching delegations. The client's
+     * delegation list is already maintained in LRU order and is used the
+     * same way by |nfs41_client_delegation_return_lru()|.
+     */
+    EnterCriticalSection(&client->state.lock);
+    list_for_each(entry, &client->state.delegations) {
+        nfs41_delegation_state *deleg = deleg_entry(entry);
+        bool match = false;
+
+        if (selected >= recall_count)
+            break;
+
+        AcquireSRWLockExclusive(&deleg->lock);
+        if (deleg->status == DELEGATION_GRANTED
+            && delegation_recall_any_match(deleg,
+                recall_read_delegs, recall_write_delegs)) {
+            deleg->state.recalled = 1;
+            deleg->status = DELEGATION_RETURNING;
+            match = true;
+        }
+        ReleaseSRWLockExclusive(&deleg->lock);
+
+        if (match) {
+            nfs41_delegation_ref(deleg);
+            delegations[selected++] = deleg;
+        }
+    }
+    LeaveCriticalSection(&client->state.lock);
+
+    for (i = 0; i < selected; i++) {
+        struct recall_thread_args *args;
+        HANDLE thread;
+
+        args = calloc(1, sizeof(struct recall_thread_args));
+        if (args == NULL) {
+            status = NFS4ERR_SERVERFAULT;
+            eprintf("nfs41_client_delegation_recall_any: "
+                "failed to allocate thread arguments\n");
+            AcquireSRWLockExclusive(&delegations[i]->lock);
+            if (delegations[i]->status == DELEGATION_RETURNING) {
+                delegations[i]->status = DELEGATION_GRANTED;
+                delegations[i]->state.recalled = 0;
+                WakeAllConditionVariable(&delegations[i]->cond);
+            }
+            ReleaseSRWLockExclusive(&delegations[i]->lock);
+            nfs41_delegation_deref(delegations[i]);
+            continue;
+        }
+
+        nfs41_root_ref(client->root);
+        args->client = client;
+        args->delegation = delegations[i];
+        args->truncate = FALSE;
+
+        thread = (HANDLE)_beginthreadex(NULL,
+            NFSD_THREAD_STACK_SIZE,
+            delegation_recall_thread,
+            args,
+            0,
+            NULL);
+        if (thread != NULL) {
+            (void)CloseHandle(thread);
+        }
+        else {
+            status = NFS4ERR_SERVERFAULT;
+            eprintf("nfs41_client_delegation_recall_any: "
+                "failed to start thread, lasterr=%d\n",
+                (int)GetLastError());
+            free(args);
+            nfs41_root_deref(client->root);
+            AcquireSRWLockExclusive(&delegations[i]->lock);
+            if (delegations[i]->status == DELEGATION_RETURNING) {
+                delegations[i]->status = DELEGATION_GRANTED;
+                delegations[i]->state.recalled = 0;
+                WakeAllConditionVariable(&delegations[i]->cond);
+            }
+            ReleaseSRWLockExclusive(&delegations[i]->lock);
+            nfs41_delegation_deref(delegations[i]);
+        }
+    }
+
+    free(delegations);
+out:
+    DPRINTF(0/*DGLVL*/,
+        ("<-- nfs41_client_delegation_recall_any() returning '%s', "
+        "delegation_count=%ld, recall_count=%ld, selected=%ld\n",
+        nfs_error_string(status),
+        (long)delegation_count, (long)recall_count, (long)selected));
+    return status;
+}
+
+
 static int deleg_fh_cmp(const struct list_entry *entry, const void *value)
 {
     const nfs41_fh *lhs = &deleg_entry(entry)->file.fh;

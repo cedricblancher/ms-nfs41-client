@@ -196,6 +196,45 @@ static enum_t handle_cb_recall(
     return res->status;
 }
 
+
+/* OP_CB_RECALL_ANY */
+static enum_t handle_cb_recall_any(
+    IN nfs41_rpc_clnt *rpc_clnt,
+    IN struct cb_recall_any_args *args,
+    OUT struct cb_recall_any_res *res)
+{
+    bool recall_read_delegs;
+    bool recall_write_delegs;
+
+    recall_read_delegs =
+        bitmap_isset(&args->type_mask, 0, RCA4_TYPE_MASK_WORD0_RDATA_DLG);
+    recall_write_delegs =
+        bitmap_isset(&args->type_mask, 0, RCA4_TYPE_MASK_WORD0_WDATA_DLG);
+
+    /* Asserts for |CB_RECALL_ANY| types not implemented yet */
+    EASSERT(!bitmap_isset(&args->type_mask,
+        0, RCA4_TYPE_MASK_WORD0_DIR_DLG));
+    EASSERT(!bitmap_isset(&args->type_mask,
+        0, RCA4_TYPE_MASK_WORD0_FILE_LAYOUT));
+    EASSERT(!bitmap_isset(&args->type_mask,
+        0, RCA4_TYPE_MASK_WORD0_BLK_LAYOUT));
+
+    DPRINTF(CBSLVL,
+        ("  OP_CB_RECALL_ANY={args->objects_to_keep=%ld,"
+        "args->type_mask={.count=%ld,.arr={0x%lx,0x%lx,0x%lx}}}\n",
+        (long)args->objects_to_keep,
+        (long)args->type_mask.count,
+        (long)((args->type_mask.count > 0) ? args->type_mask.arr[0] : 0L),
+        (long)((args->type_mask.count > 1) ? args->type_mask.arr[1] : 0L),
+        (long)((args->type_mask.count > 2) ? args->type_mask.arr[2] : 0L)));
+
+    res->status = nfs41_client_delegation_recall_any(rpc_clnt->client,
+        args->objects_to_keep,
+        recall_read_delegs,
+        recall_write_delegs);
+    return res->status;
+}
+
 /* OP_CB_NOTIFY_DEVICEID */
 static enum_t handle_cb_notify_deviceid(
     IN nfs41_rpc_clnt *rpc_clnt,
@@ -470,7 +509,8 @@ static void handle_cb_compound(nfs41_rpc_clnt *rpc_clnt, cb_req *req, struct cb_
             break;
         case OP_CB_RECALL_ANY:
             DPRINTF(1, ("OP_CB_RECALL_ANY\n"));
-            res->status = NFS4ERR_NOTSUPP;
+            res->status = handle_cb_recall_any(rpc_clnt,
+                &argop->args.recall_any, &resop->res.recall_any);
             break;
         case OP_CB_RECALLABLE_OBJ_AVAIL:
             DPRINTF(1, ("OP_CB_RECALLABLE_OBJ_AVAIL\n"));
@@ -507,7 +547,9 @@ static void handle_cb_compound(nfs41_rpc_clnt *rpc_clnt, cb_req *req, struct cb_
 out:
     /* free the arguments */
     xdr->x_op = XDR_FREE;
-    proc_cb_compound_args(xdr, &args);
+    if (!proc_cb_compound_args(xdr, &args)) {
+        eprintf("handle_cb_compound: proc_cb_compound_args() for XDR_FREE failed\n");
+    }
 
     *reply = res;
     DPRINTF(CBSLVL, ("<-- handle_cb_compound() returning '%s' (%u results)\n",

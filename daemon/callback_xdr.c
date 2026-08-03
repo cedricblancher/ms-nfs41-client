@@ -375,12 +375,15 @@ out:
 }
 
 /* OP_CB_RECALL_ANY */
-static bool_t op_cb_recall_any_args(XDR *xdr, struct cb_recall_any_args *res)
+static bool_t op_cb_recall_any_args(XDR *xdr, struct cb_recall_any_args *args)
 {
     bool_t result;
 
-    result = xdr_uint32_t(xdr, &res->target_highest_slotid);
-    if (!result) { CBX_ERR("recall_any.target_highest_slotid"); goto out; }
+    result = xdr_uint32_t(xdr, &args->objects_to_keep);
+    if (!result) { CBX_ERR("recall_any.objects_to_keep"); goto out; }
+
+    result = xdr_bitmap4(xdr, &args->type_mask);
+    if (!result) { CBX_ERR("recall_any.type_mask"); goto out; }
 out:
     return result;
 }

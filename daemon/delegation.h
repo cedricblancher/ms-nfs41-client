@@ -1,8 +1,10 @@
 /* NFSv4.1 client for Windows
- * Copyright © 2012 The Regents of the University of Michigan
+ * Copyright (C) 2012 The Regents of the University of Michigan
+ * Copyright (C) 2024-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Olga Kornievskaia <aglo@umich.edu>
  * Casey Bodley <cbodley@umich.edu>
+ * Roland Mainz <roland.mainz@nrubsig.org>
  *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by
@@ -81,13 +83,18 @@ static int nfs41_delegation_return(
 }
 #endif
 
-
 /* asynchronous delegation recall */
 int nfs41_delegation_recall(
     IN nfs41_client *client,
     IN nfs41_fh *fh,
     IN const stateid4 *stateid,
     IN bool_t truncate);
+
+int nfs41_client_delegation_recall_any(
+    IN nfs41_client *client,
+    IN uint32_t objects_to_keep,
+    IN bool recall_read_delegs,
+    IN bool recall_write_delegs);
 
 int nfs41_delegation_getattr(
     IN nfs41_client *client,

@@ -1,8 +1,10 @@
 /* NFSv4.1 client for Windows
- * Copyright © 2012 The Regents of the University of Michigan
+ * Copyright (C) 2012 The Regents of the University of Michigan
+ * Copyright (C) 2024-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Olga Kornievskaia <aglo@umich.edu>
  * Casey Bodley <cbodley@umich.edu>
+ * Roland Mainz <roland.mainz@nrubsig.org>
  *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by
@@ -162,8 +164,19 @@ struct cb_push_deleg_res {
 };
 
 /* OP_CB_RECALL_ANY */
+#define RCA4_TYPE_MASK_WORD0_RDATA_DLG            MAKE_WORD0(0)
+#define RCA4_TYPE_MASK_WORD0_WDATA_DLG            MAKE_WORD0(1)
+#define RCA4_TYPE_MASK_WORD0_DIR_DLG              MAKE_WORD0(2)
+#define RCA4_TYPE_MASK_WORD0_FILE_LAYOUT          MAKE_WORD0(3)
+#define RCA4_TYPE_MASK_WORD0_BLK_LAYOUT           MAKE_WORD0(4)
+#define RCA4_TYPE_MASK_WORD0_OBJ_LAYOUT_MIN       MAKE_WORD0(8)
+#define RCA4_TYPE_MASK_WORD0_OBJ_LAYOUT_MAX       MAKE_WORD0(9)
+#define RCA4_TYPE_MASK_WORD0_OTHER_LAYOUT_MIN     MAKE_WORD0(12)
+#define RCA4_TYPE_MASK_WORD0_OTHER_LAYOUT_MAX     MAKE_WORD0(15)
+
 struct cb_recall_any_args {
-    uint32_t                target_highest_slotid;
+    uint32_t        objects_to_keep;
+    bitmap4         type_mask;
 };
 
 struct cb_recall_any_res {
@@ -234,6 +247,7 @@ union cb_op_args {
     struct cb_sequence_args sequence;
     struct cb_getattr_args  getattr;
     struct cb_recall_args   recall;
+    struct cb_recall_any_args recall_any;
     struct cb_notify_deviceid_args notify_deviceid;
 };
 struct cb_argop {
@@ -259,6 +273,7 @@ union cb_op_res {
     struct cb_sequence_res  sequence;
     struct cb_getattr_res   getattr;
     struct cb_recall_res    recall;
+    struct cb_recall_any_res recall_any;
     struct cb_notify_deviceid_res notify_deviceid;
 };
 struct cb_resop {
