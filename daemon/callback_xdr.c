@@ -423,12 +423,16 @@ out:
 }
 
 /* OP_CB_RECALLABLE_OBJ_AVAIL */
-static bool_t op_cb_recallable_obj_avail_args(XDR *xdr, struct cb_recallable_obj_avail_args *res)
+static bool_t op_cb_recallable_obj_avail_args(XDR *xdr,
+    struct cb_recallable_obj_avail_args *args)
 {
     bool_t result;
 
-    result = xdr_uint32_t(xdr, &res->target_highest_slotid);
-    if (!result) { CBX_ERR("recallable_obj_avail.target_highest_slotid"); goto out; }
+    result = xdr_uint32_t(xdr, &args->objects_to_keep);
+    if (!result) { CBX_ERR("recallable_obj_avail.objects_to_keep"); goto out; }
+
+    result = xdr_bitmap4(xdr, &args->type_mask);
+    if (!result) { CBX_ERR("recallable_obj_avail.type_mask"); goto out; }
 out:
     return result;
 }

@@ -194,7 +194,8 @@ struct cb_recall_any_res {
 
 /* OP_CB_RECALLABLE_OBJ_AVAIL */
 struct cb_recallable_obj_avail_args {
-    uint32_t                target_highest_slotid;
+    uint32_t                objects_to_keep;
+    bitmap4                 type_mask;
 };
 
 struct cb_recallable_obj_avail_res {
