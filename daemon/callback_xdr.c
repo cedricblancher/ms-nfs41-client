@@ -60,6 +60,22 @@ static bool_t common_notify4(XDR *xdr, struct notify4 *notify)
         && xdr_bytes(xdr, &notify->list, &notify->len, NFS4_OPAQUE_LIMIT);
 }
 
+static bool_t common_state_owner4(XDR *xdr, state_owner4 *owner)
+{
+    uint64_t clientid = 0;
+    unsigned char *owner_val = owner->owner;
+
+    /* 'owner' is a static array, so do not try to free it */
+    if (xdr->x_op == XDR_FREE)
+        return TRUE;
+
+    if (!xdr_uint64_t(xdr, &clientid))
+        return FALSE;
+
+    return xdr_bytes(xdr, (char **)&owner_val,
+        &owner->owner_len, NFS4_OPAQUE_LIMIT);
+}
+
 /* OP_CB_LAYOUTRECALL */
 static bool_t op_cb_layoutrecall_file(XDR *xdr, struct cb_recall_file *args)
 {
@@ -449,12 +465,16 @@ out:
 }
 
 /* OP_CB_NOTIFY_LOCK */
-static bool_t op_cb_notify_lock_args(XDR *xdr, struct cb_notify_lock_args *res)
+static bool_t op_cb_notify_lock_args(XDR *xdr,
+    struct cb_notify_lock_args *args)
 {
     bool_t result;
 
-    result = xdr_uint32_t(xdr, &res->target_highest_slotid);
-    if (!result) { CBX_ERR("notify_lock.target_highest_slotid"); goto out; }
+    result = common_fh(xdr, &args->fh);
+    if (!result) { CBX_ERR("notify_lock.fh"); goto out; }
+
+    result = common_state_owner4(xdr, &args->lock_owner);
+    if (!result) { CBX_ERR("notify_lock.lock_owner"); goto out; }
 out:
     return result;
 }

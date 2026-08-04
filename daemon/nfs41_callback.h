@@ -212,7 +212,8 @@ struct cb_wants_cancelled_res {
 
 /* OP_CB_NOTIFY_LOCK */
 struct cb_notify_lock_args {
-    uint32_t                target_highest_slotid;
+    nfs41_fh                fh;
+    state_owner4            lock_owner;
 };
 
 struct cb_notify_lock_res {
