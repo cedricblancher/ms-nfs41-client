@@ -245,6 +245,33 @@ struct cb_notify_deviceid_res {
     enum_t                  status;
 };
 
+/* OP_CB_OFFLOAD */
+struct cb_offload_write_response {
+    uint32_t                callback_id_count;
+    stateid4                callback_id[1];
+    uint64_t                count;
+    uint32_t                committed; /* stable_how4 */
+    unsigned char           writeverf[NFS4_VERIFIER_SIZE];
+};
+
+struct cb_offload_info {
+    enum_t                  status;
+    union {
+        struct cb_offload_write_response resok;
+        uint64_t            bytes_copied;
+    } u;
+};
+
+struct cb_offload_args {
+    nfs41_fh                fh;
+    stateid4                stateid;
+    struct cb_offload_info  offload_info;
+};
+
+struct cb_offload_res {
+    enum_t                  status;
+};
+
 /* CB_COMPOUND */
 #define CB_COMPOUND_MAX_TAG         64
 #define CB_COMPOUND_MAX_OPERATIONS  16
@@ -257,6 +284,7 @@ union cb_op_args {
     struct cb_recall_args   recall;
     struct cb_recall_any_args recall_any;
     struct cb_notify_deviceid_args notify_deviceid;
+    struct cb_offload_args  offload;
 };
 struct cb_argop {
     enum_t                  opnum;
@@ -283,6 +311,7 @@ union cb_op_res {
     struct cb_recall_res    recall;
     struct cb_recall_any_res recall_any;
     struct cb_notify_deviceid_res notify_deviceid;
+    struct cb_offload_res   offload;
 };
 struct cb_resop {
     enum_t                  opnum;

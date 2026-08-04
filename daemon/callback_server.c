@@ -528,6 +528,10 @@ static void handle_cb_compound(nfs41_rpc_clnt *rpc_clnt, cb_req *req, struct cb_
             DPRINTF(1, ("OP_CB_NOTIFY_DEVICEID\n"));
             res->status = NFS4_OK;
             break;
+        case OP_CB_OFFLOAD:
+            DPRINTF(1, ("OP_CB_OFFLOAD\n"));
+            res->status = NFS4ERR_NOTSUPP;
+            break;
         case OP_CB_ILLEGAL:
             eprintf("OP_CB_ILLEGAL\n");
             /* FIXME: Maybe |NFS4ERR_OP_ILLEGAL| is better ? */

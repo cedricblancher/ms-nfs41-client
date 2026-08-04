@@ -596,6 +596,92 @@ out:
     return result;
 }
 
+/* OP_CB_OFFLOAD */
+static bool_t op_cb_offload_write_response(XDR *xdr,
+    struct cb_offload_write_response *response)
+{
+    bool_t result;
+
+    result = xdr_uint32_t(xdr, &response->callback_id_count);
+    if (!result) {
+        CBX_ERR("offload.write_response.callback_id_count");
+        goto out;
+    }
+
+    if (response->callback_id_count > 1) {
+        eprintf("op_cb_offload_write_response: callback_id_count=%d invalid\n",
+            (long)response->callback_id_count);
+        result = FALSE;
+        goto out;
+    }
+
+    if (response->callback_id_count == 1) {
+        result = common_stateid(xdr, &response->callback_id[0]);
+        if (!result) {
+            CBX_ERR("offload.write_response.callback_id");
+            goto out;
+        }
+    }
+
+    result = xdr_uint64_t(xdr, &response->count);
+    if (!result) { CBX_ERR("offload.write_response.count"); goto out; }
+
+    result = xdr_uint32_t(xdr, &response->committed);
+    if (!result) { CBX_ERR("offload.write_response.committed"); goto out; }
+
+    result = xdr_opaque(xdr, (char *)response->writeverf, NFS4_VERIFIER_SIZE);
+    if (!result) { CBX_ERR("offload.write_response.writeverf"); goto out; }
+out:
+    return result;
+}
+
+static bool_t op_cb_offload_info(XDR *xdr, struct cb_offload_info *info)
+{
+    bool_t result;
+
+    result = xdr_enum(xdr, &info->status);
+    if (!result) { CBX_ERR("offload.info.status"); goto out; }
+
+    switch (info->status) {
+    case NFS4_OK:
+        result = op_cb_offload_write_response(xdr, &info->u.resok);
+        if (!result) { CBX_ERR("offload.info.resok"); goto out; }
+        break;
+    default:
+        result = xdr_uint64_t(xdr, &info->u.bytes_copied);
+        if (!result) { CBX_ERR("offload.info.bytes_copied"); goto out; }
+        break;
+    }
+out:
+    return result;
+}
+
+static bool_t op_cb_offload_args(XDR *xdr, struct cb_offload_args *args)
+{
+    bool_t result;
+
+    result = common_fh(xdr, &args->fh);
+    if (!result) { CBX_ERR("offload.fh"); goto out; }
+
+    result = common_stateid(xdr, &args->stateid);
+    if (!result) { CBX_ERR("offload.stateid"); goto out; }
+
+    result = op_cb_offload_info(xdr, &args->offload_info);
+    if (!result) { CBX_ERR("offload.info"); goto out; }
+out:
+    return result;
+}
+
+static bool_t op_cb_offload_res(XDR *xdr, struct cb_offload_res *res)
+{
+    bool_t result;
+
+    result = xdr_enum(xdr, &res->status);
+    if (!result) { CBX_ERR("offload.status"); goto out; }
+out:
+    return result;
+}
+
 /* CB_COMPOUND */
 static bool_t cb_compound_tag(XDR *xdr, struct cb_compound_tag *args)
 {
@@ -617,7 +703,7 @@ static const struct xdr_discrim cb_argop_discrim[] = {
     { OP_CB_WANTS_CANCELLED, (xdrproc_t)op_cb_wants_cancelled_args },
     { OP_CB_NOTIFY_LOCK,     (xdrproc_t)op_cb_notify_lock_args },
     { OP_CB_NOTIFY_DEVICEID, (xdrproc_t)op_cb_notify_deviceid_args },
-    { OP_CB_OFFLOAD,         NULL_xdrproc_t },
+    { OP_CB_OFFLOAD,         (xdrproc_t)op_cb_offload_args },
     { OP_CB_ILLEGAL,         NULL_xdrproc_t },
 };
 
@@ -667,8 +753,8 @@ static const struct xdr_discrim cb_resop_discrim[] = {
     { OP_CB_WANTS_CANCELLED, (xdrproc_t)op_cb_wants_cancelled_res },
     { OP_CB_NOTIFY_LOCK,     (xdrproc_t)op_cb_notify_lock_res },
     { OP_CB_NOTIFY_DEVICEID, (xdrproc_t)op_cb_notify_deviceid_res },
-    { OP_CB_OFFLOAD,         NULL_xdrproc_t },
-    { OP_CB_ILLEGAL,         NULL_xdrproc_t },
+    { OP_CB_OFFLOAD,        (xdrproc_t)op_cb_offload_res },
+    { OP_CB_ILLEGAL,        NULL_xdrproc_t },
 };
 
 static bool_t cb_compound_resop(XDR *xdr, struct cb_resop *res)
