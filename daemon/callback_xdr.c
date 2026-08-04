@@ -333,12 +333,20 @@ out:
 }
 
 /* OP_CB_NOTIFY */
-static bool_t op_cb_notify_args(XDR *xdr, struct cb_notify_args *res)
+static bool_t op_cb_notify_args(XDR *xdr, struct cb_notify_args *args)
 {
     bool_t result;
 
-    result = xdr_uint32_t(xdr, &res->target_highest_slotid);
-    if (!result) { CBX_ERR("notify.target_highest_slotid"); goto out; }
+    result = common_stateid(xdr, &args->stateid);
+    if (!result) { CBX_ERR("notify.stateid"); goto out; }
+
+    result = common_fh(xdr, &args->fh);
+    if (!result) { CBX_ERR("notify.fh"); goto out; }
+
+    result = xdr_array(xdr, (char **)&args->changes,
+        &args->change_count, CB_COMPOUND_MAX_OPERATIONS,
+        sizeof(struct notify4), (xdrproc_t)common_notify4);
+    if (!result) { CBX_ERR("notify.changes"); goto out; }
 out:
     return result;
 }

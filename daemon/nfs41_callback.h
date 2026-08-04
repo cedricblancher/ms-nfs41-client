@@ -145,11 +145,20 @@ struct cb_recall_res {
     enum_t                  status;
 };
 
-/* OP_CB_NOTIFY */
-struct cb_notify_args {
-    uint32_t                target_highest_slotid;
+/* directory notification */
+struct notify4 {
+    bitmap4                 mask;
+    char                    *list;
+    uint32_t                len;
 };
 
+/* OP_CB_NOTIFY */
+struct cb_notify_args {
+    stateid4                stateid;
+    nfs41_fh                fh;
+    struct notify4          *changes;
+    uint32_t                change_count;
+};
 struct cb_notify_res {
     enum_t                  status;
 };
@@ -221,11 +230,7 @@ struct notify_deviceid4 {
     enum pnfs_layout_type   layouttype;
     bool_t                  immediate;
 };
-struct notify4 {
-    bitmap4                 mask;
-    char                    *list;
-    uint32_t                len;
-};
+
 struct cb_notify_deviceid_args {
     struct notify4          *notify_list;
     uint32_t                notify_count;
