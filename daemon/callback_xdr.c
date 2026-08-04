@@ -448,12 +448,16 @@ out:
 }
 
 /* OP_CB_WANTS_CANCELLED */
-static bool_t op_cb_wants_cancelled_args(XDR *xdr, struct cb_wants_cancelled_args *res)
+static bool_t op_cb_wants_cancelled_args(XDR *xdr,
+    struct cb_wants_cancelled_args *args)
 {
     bool_t result;
 
-    result = xdr_uint32_t(xdr, &res->target_highest_slotid);
-    if (!result) { CBX_ERR("wants_cancelled.target_highest_slotid"); goto out; }
+    result = xdr_bool(xdr, &args->contended_wants_cancelled);
+    if (!result) { CBX_ERR("wants_cancelled.contended"); goto out; }
+
+    result = xdr_bool(xdr, &args->resourced_wants_cancelled);
+    if (!result) { CBX_ERR("wants_cancelled.resourced"); goto out; }
 out:
     return result;
 }

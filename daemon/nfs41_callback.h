@@ -204,7 +204,8 @@ struct cb_recallable_obj_avail_res {
 
 /* OP_CB_WANTS_CANCELLED */
 struct cb_wants_cancelled_args {
-    uint32_t                target_highest_slotid;
+    bool_t                  contended_wants_cancelled;
+    bool_t                  resourced_wants_cancelled;
 };
 
 struct cb_wants_cancelled_res {
