@@ -1,6 +1,6 @@
 /* NFSv4.1 client for Windows
  * Copyright (C) 2012 The Regents of the University of Michigan
- * Copyright (C) 2024-2025 Roland Mainz <roland.mainz@nrubsig.org>
+ * Copyright (C) 2024-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Olga Kornievskaia <aglo@umich.edu>
  * Casey Bodley <cbodley@umich.edu>
@@ -349,6 +349,29 @@ void nfsacl41_free(nfsacl41 *acl)
 {
     XDR xdr = { .x_op = XDR_FREE };
     xdr_nfsacl41(&xdr, acl);
+}
+
+bool_t xdr_limit_by4(XDR *xdr, enum limit_by4 *limitby)
+{
+    enum_t value;
+
+    switch (xdr->x_op) {
+        case XDR_ENCODE:
+            value = (enum_t)*limitby;
+            return xdr_enum(xdr, &value);
+        case XDR_DECODE:
+            if (!xdr_enum(xdr, &value))
+                return FALSE;
+            *limitby = (enum limit_by4)value;
+                return TRUE;
+        case XDR_FREE:
+            return TRUE;
+        default:
+            eprintf("xdr_limit_by4: unsupported xdr operation %d\n",
+                (int)xdr->x_op);
+            return FALSE;
+    }
+    /* NOTREACHED */
 }
 
 /* pathname4
@@ -2138,9 +2161,9 @@ static bool_t decode_space_limit4(
     XDR *xdr,
     uint64_t *filesize)
 {
-    uint32_t limitby;
+    enum limit_by4 limitby;
 
-    if (!xdr_uint32_t(xdr, &limitby))
+    if (!xdr_limit_by4(xdr, &limitby))
         return FALSE;
 
     switch (limitby)
@@ -2150,7 +2173,7 @@ static bool_t decode_space_limit4(
     case NFS_LIMIT_BLOCKS:
         return decode_modified_limit4(xdr, filesize);
     default:
-        eprintf("decode_space_limit4: limitby %d invalid\n", limitby);
+        eprintf("decode_space_limit4: limitby %d invalid\n", (int)limitby);
         return FALSE;
     }
 }

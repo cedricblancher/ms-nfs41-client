@@ -35,6 +35,7 @@
 bool_t xdr_bitmap4(XDR *xdr, bitmap4 *bitmap);
 bool_t xdr_fattr4(XDR *xdr, fattr4 *fattr);
 bool_t xdr_nfsace4(XDR *xdr, nfsace4 *ace);
+bool_t xdr_limit_by4(XDR *xdr, enum limit_by4 *limitby);
 
 static bool_t common_stateid(XDR *xdr, stateid4 *stateid)
 {
@@ -78,7 +79,7 @@ out:
 static bool_t op_cb_open_write_delegation(XDR *xdr,
     open_delegation4 *delegation)
 {
-    uint32_t limitby; /* FIXME; should be type |limit_by4| */
+    enum limit_by4 limitby;
     uint32_t blocks, bytes_per_block;
     uint64_t filesize;
     bool_t result;
@@ -89,7 +90,7 @@ static bool_t op_cb_open_write_delegation(XDR *xdr,
     result = xdr_bool(xdr, &delegation->recalled);
     if (!result) { CBX_ERR("push_deleg.delegation.write.recalled"); goto out; }
 
-    result = xdr_uint32_t(xdr, &limitby);
+    result = xdr_limit_by4(xdr, &limitby);
     if (!result) { CBX_ERR("push_deleg.delegation.write.limitby"); goto out; }
 
     switch (limitby) {

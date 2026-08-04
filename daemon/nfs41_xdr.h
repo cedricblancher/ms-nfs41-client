@@ -31,6 +31,8 @@ bool_t nfs_encode_compound(XDR *xdr, caddr_t *args);
 bool_t nfs_decode_compound(XDR *xdr, caddr_t *res);
 
 void nfsacl41_free(nfsacl41 *acl);
+enum limit_by4;
+bool_t xdr_limit_by4(XDR *xdr, enum limit_by4 *limitby);
 bool_t xdr_stateid4(XDR *xdr, stateid4 *si);
 
 /* NFSv4.2 ops */
