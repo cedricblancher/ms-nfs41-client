@@ -302,7 +302,7 @@ static bool_t xdr_mdsthreshold(
     return TRUE;
 }
 
-static bool_t xdr_nfsace4(
+bool_t xdr_nfsace4(
     XDR *xdr,
     nfsace4 *ace)
 {
@@ -2133,11 +2133,6 @@ static bool_t decode_modified_limit4(
     *filesize = (uint64_t)blocks * bytes_per_block;
     return TRUE;
 }
-
-enum limit_by4 {
-    NFS_LIMIT_SIZE          = 1,
-    NFS_LIMIT_BLOCKS        = 2
-};
 
 static bool_t decode_space_limit4(
     XDR *xdr,

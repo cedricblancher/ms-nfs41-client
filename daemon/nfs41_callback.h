@@ -165,7 +165,8 @@ struct cb_notify_res {
 
 /* OP_CB_PUSH_DELEG */
 struct cb_push_deleg_args {
-    uint32_t                target_highest_slotid;
+    nfs41_fh                fh;
+    open_delegation4        delegation;
 };
 
 struct cb_push_deleg_res {

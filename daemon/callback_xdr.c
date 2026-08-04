@@ -34,6 +34,7 @@
 /* common types */
 bool_t xdr_bitmap4(XDR *xdr, bitmap4 *bitmap);
 bool_t xdr_fattr4(XDR *xdr, fattr4 *fattr);
+bool_t xdr_nfsace4(XDR *xdr, nfsace4 *ace);
 
 static bool_t common_stateid(XDR *xdr, stateid4 *stateid)
 {
@@ -52,6 +53,124 @@ static bool_t common_fsid(XDR *xdr, nfs41_fsid *fsid)
 {
     return xdr_uint64_t(xdr, &fsid->major)
         && xdr_uint64_t(xdr, &fsid->minor);
+}
+
+static bool_t op_cb_open_read_delegation(XDR *xdr,
+    open_delegation4 *delegation)
+{
+    bool_t result;
+
+    result = common_stateid(xdr, &delegation->stateid);
+    if (!result) { CBX_ERR("push_deleg.delegation.read.stateid"); goto out; }
+
+    result = xdr_bool(xdr, &delegation->recalled);
+    if (!result) { CBX_ERR("push_deleg.delegation.read.recalled"); goto out; }
+
+    result = xdr_nfsace4(xdr, &delegation->permissions);
+    if (!result) {
+        CBX_ERR("push_deleg.delegation.read.permissions");
+        goto out;
+    }
+out:
+    return result;
+}
+
+static bool_t op_cb_open_write_delegation(XDR *xdr,
+    open_delegation4 *delegation)
+{
+    uint32_t limitby; /* FIXME; should be type |limit_by4| */
+    uint32_t blocks, bytes_per_block;
+    uint64_t filesize;
+    bool_t result;
+
+    result = common_stateid(xdr, &delegation->stateid);
+    if (!result) { CBX_ERR("push_deleg.delegation.write.stateid"); goto out; }
+
+    result = xdr_bool(xdr, &delegation->recalled);
+    if (!result) { CBX_ERR("push_deleg.delegation.write.recalled"); goto out; }
+
+    result = xdr_uint32_t(xdr, &limitby);
+    if (!result) { CBX_ERR("push_deleg.delegation.write.limitby"); goto out; }
+
+    switch (limitby) {
+    case NFS_LIMIT_SIZE:
+        result = xdr_uint64_t(xdr, &filesize);
+        if (!result) { CBX_ERR("push_deleg.delegation.write.filesize"); goto out; }
+        break;
+    case NFS_LIMIT_BLOCKS:
+        result = xdr_uint32_t(xdr, &blocks);
+        if (!result) { CBX_ERR("push_deleg.delegation.write.blocks"); goto out; }
+
+        result = xdr_uint32_t(xdr, &bytes_per_block);
+        if (!result) { CBX_ERR("push_deleg.delegation.write.bytes_per_block"); goto out; }
+        break;
+    default:
+        eprintf("op_cb_open_write_delegation: "
+            "unsupported space_limit4 limitby=%ld\n",
+            (long)limitby);
+        result = FALSE;
+        goto out;
+    }
+
+    result = xdr_nfsace4(xdr, &delegation->permissions);
+    if (!result) { CBX_ERR("push_deleg.delegation.write.permissions"); goto out; }
+out:
+    return result;
+}
+
+static bool_t op_cb_open_none_delegation(XDR *xdr)
+{
+    enum_t why_no_deleg;
+    bool_t will_signal;
+    bool_t result;
+
+    result = xdr_enum(xdr, &why_no_deleg);
+    if (!result) { CBX_ERR("push_deleg.delegation.none_ext.why_no_deleg"); goto out; }
+
+    switch (why_no_deleg) {
+    case WND4_CONTENTION:
+    case WND4_RESOURCE:
+        result = xdr_bool(xdr, &will_signal);
+        if (!result) { CBX_ERR("push_deleg.delegation.none_ext.will_signal"); goto out; }
+        break;
+    default:
+        result = TRUE;
+        break;
+    }
+out:
+    return result;
+}
+
+static bool_t op_cb_open_delegation(XDR *xdr,
+    open_delegation4 *delegation)
+{
+    bool_t result;
+
+    result = xdr_enum(xdr, (enum_t *)&delegation->type);
+    if (!result) { CBX_ERR("push_deleg.delegation.type"); goto out; }
+
+    switch (delegation->type) {
+    case OPEN_DELEGATE_NONE:
+        result = TRUE;
+        break;
+    case OPEN_DELEGATE_NONE_EXT:
+        result = op_cb_open_none_delegation(xdr);
+        break;
+    case OPEN_DELEGATE_READ:
+        result = op_cb_open_read_delegation(xdr, delegation);
+        break;
+    case OPEN_DELEGATE_WRITE:
+        result = op_cb_open_write_delegation(xdr, delegation);
+        break;
+    default:
+        eprintf("op_cb_open_delegation: "
+            "unsupported delegation->type=%d\n",
+            (int)delegation->type);
+        result = FALSE;
+        break;
+    }
+out:
+    return result;
 }
 
 static bool_t common_notify4(XDR *xdr, struct notify4 *notify)
@@ -378,12 +497,15 @@ out:
 }
 
 /* OP_CB_PUSH_DELEG */
-static bool_t op_cb_push_deleg_args(XDR *xdr, struct cb_push_deleg_args *res)
+static bool_t op_cb_push_deleg_args(XDR *xdr, struct cb_push_deleg_args *args)
 {
     bool_t result;
 
-    result = xdr_uint32_t(xdr, &res->target_highest_slotid);
-    if (!result) { CBX_ERR("push_deleg.target_highest_slotid"); goto out; }
+    result = common_fh(xdr, &args->fh);
+    if (!result) { CBX_ERR("push_deleg.fh"); goto out; }
+
+    result = op_cb_open_delegation(xdr, &args->delegation);
+    if (!result) { CBX_ERR("push_deleg.delegation"); goto out; }
 out:
     return result;
 }

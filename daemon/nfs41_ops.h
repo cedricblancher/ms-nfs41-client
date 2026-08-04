@@ -599,6 +599,12 @@ typedef struct __openflag4 {
     createhow4              how;
 } openflag4;
 
+enum limit_by4 {
+    NFS_LIMIT_SIZE          = 1,
+    NFS_LIMIT_BLOCKS        = 2
+    /* others as needed */
+};
+
 enum {
     OPEN4_SHARE_ACCESS_READ     = 0x00000001,
     OPEN4_SHARE_ACCESS_WRITE    = 0x00000002,
