@@ -37,13 +37,7 @@ bool_t xdr_fattr4(XDR *xdr, fattr4 *fattr);
 bool_t xdr_nfsace4(XDR *xdr, nfsace4 *ace);
 bool_t xdr_limit_by4(XDR *xdr, enum limit_by4 *limitby);
 bool_t xdr_stateid4(XDR *xdr, stateid4 *si);
-
-static bool_t common_fh(XDR *xdr, nfs41_fh *fh)
-{
-    return xdr_uint32_t(xdr, &fh->len)
-        && fh->len <= NFS4_FHSIZE
-        && xdr_opaque(xdr, (char*)fh->fh, fh->len);
-}
+bool_t xdr_fh(XDR *xdr, nfs41_fh *fh);
 
 static bool_t common_fsid(XDR *xdr, nfs41_fsid *fsid)
 {
@@ -196,7 +190,7 @@ static bool_t op_cb_layoutrecall_file(XDR *xdr, struct cb_recall_file *args)
 {
     bool_t result;
 
-    result = common_fh(xdr, &args->fh);
+    result = xdr_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("layoutrecall_file.fh"); goto out; }
 
     result = xdr_uint64_t(xdr, &args->offset);
@@ -379,7 +373,7 @@ static bool_t op_cb_getattr_args(XDR *xdr, struct cb_getattr_args *args)
 {
     bool_t result;
 
-    result = common_fh(xdr, &args->fh);
+    result = xdr_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("getattr.fh"); goto out; }
 
     result = xdr_bitmap4(xdr, &args->attr_request);
@@ -447,7 +441,7 @@ static bool_t op_cb_recall_args(XDR *xdr, struct cb_recall_args *args)
     result = xdr_bool(xdr, &args->truncate);
     if (!result) { CBX_ERR("recall.truncate"); goto out; }
 
-    result = common_fh(xdr, &args->fh);
+    result = xdr_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("recall.fh"); goto out; }
 out:
     return result;
@@ -471,7 +465,7 @@ static bool_t op_cb_notify_args(XDR *xdr, struct cb_notify_args *args)
     result = xdr_stateid4(xdr, &args->stateid);
     if (!result) { CBX_ERR("notify.stateid"); goto out; }
 
-    result = common_fh(xdr, &args->fh);
+    result = xdr_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("notify.fh"); goto out; }
 
     result = xdr_array(xdr, (char **)&args->changes,
@@ -497,7 +491,7 @@ static bool_t op_cb_push_deleg_args(XDR *xdr, struct cb_push_deleg_args *args)
 {
     bool_t result;
 
-    result = common_fh(xdr, &args->fh);
+    result = xdr_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("push_deleg.fh"); goto out; }
 
     result = op_cb_open_delegation(xdr, &args->delegation);
@@ -596,7 +590,7 @@ static bool_t op_cb_notify_lock_args(XDR *xdr,
 {
     bool_t result;
 
-    result = common_fh(xdr, &args->fh);
+    result = xdr_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("notify_lock.fh"); goto out; }
 
     result = common_state_owner4(xdr, &args->lock_owner);
@@ -778,7 +772,7 @@ static bool_t op_cb_offload_args(XDR *xdr, struct cb_offload_args *args)
 {
     bool_t result;
 
-    result = common_fh(xdr, &args->fh);
+    result = xdr_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("offload.fh"); goto out; }
 
     result = xdr_stateid4(xdr, &args->stateid);

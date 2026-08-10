@@ -34,6 +34,7 @@ void nfsacl41_free(nfsacl41 *acl);
 enum limit_by4;
 bool_t xdr_limit_by4(XDR *xdr, enum limit_by4 *limitby);
 bool_t xdr_stateid4(XDR *xdr, stateid4 *si);
+bool_t xdr_fh(XDR *xdr, nfs41_fh *fh);
 
 /* NFSv4.2 ops */
 bool_t encode_op_allocate(XDR *xdr, nfs_argop4 *argop);

@@ -165,12 +165,13 @@ bool_t xdr_fattr4(
 }
 
 /* nfs41_fh */
-static bool_t xdr_fh(
+bool_t xdr_fh(
     XDR *xdr,
     nfs41_fh *fh)
 {
-    unsigned char *pfh = fh->fh;
-    return xdr_bytes(xdr, (char **)&pfh, &fh->len, NFS4_FHSIZE);
+    return xdr_uint32_t(xdr, &fh->len)
+        && (fh->len <= NFS4_FHSIZE)
+        && xdr_opaque(xdr, (char*)fh->fh, fh->len);
 }
 
 /* nfs41_fsid */
