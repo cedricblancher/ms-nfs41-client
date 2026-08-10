@@ -1,5 +1,5 @@
 #
-# ms-nfs41-client manual testing sequence, 2026-07-09
+# ms-nfs41-client manual testing sequence, 2026-08-10
 #
 # Draft version, needs to be turned into automated tests
 # if possible
@@ -1315,6 +1315,28 @@ Number FriendlyName    SerialNumber      MediaType   CanPool OperationalStatus H
 1      OpenZFS WinZVOL nfspool1/myblock1 Unspecified False   OK                Healthy      Auto-Select 32 GB
 ---- snip ----
 4. The virtual disk "nfspool1/myblock1" (Disk 1) can now be formatted with NTFS/ReFS, used for a HyperV VM disk etc.
+
+
+#
+# WinBTRFS - create BTRFS filesystem with NFSv4.2 sparse file as storage via filedisk
+#
+# Notes:
+# - Requires filedisk/filedisk-sparse
+# - Tested with WinBTRFS from https://github.com/maharmstone/btrfs/releases/tag/v1.9
+#
+
+---- snip ----
+# cd nfsdir
+rm winext4fs.img
+truncate -s 1G winbtrfs001.img
+filedisk /mount 8 "$(cygpath -w "$PWD/winbtrfs001.img")" X:
+mkbtrfs X:
+mount
+cd /cygdrive/x
+# ...
+cd ~
+filedisk /umount X:
+---- snip ----
 
 
 #
