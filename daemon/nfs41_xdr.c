@@ -175,7 +175,7 @@ bool_t xdr_fh(
 }
 
 /* nfs41_fsid */
-static bool_t xdr_fsid(
+bool_t xdr_fsid(
     XDR *xdr,
     nfs41_fsid *fsid)
 {

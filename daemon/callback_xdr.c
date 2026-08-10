@@ -38,12 +38,7 @@ bool_t xdr_nfsace4(XDR *xdr, nfsace4 *ace);
 bool_t xdr_limit_by4(XDR *xdr, enum limit_by4 *limitby);
 bool_t xdr_stateid4(XDR *xdr, stateid4 *si);
 bool_t xdr_fh(XDR *xdr, nfs41_fh *fh);
-
-static bool_t common_fsid(XDR *xdr, nfs41_fsid *fsid)
-{
-    return xdr_uint64_t(xdr, &fsid->major)
-        && xdr_uint64_t(xdr, &fsid->minor);
-}
+bool_t xdr_fsid(XDR *xdr, nfs41_fsid *fsid);
 
 static bool_t op_cb_open_read_delegation(XDR *xdr,
     open_delegation4 *delegation)
@@ -209,7 +204,7 @@ static bool_t op_cb_layoutrecall_fsid(XDR *xdr, union cb_recall_file_args *args)
 {
     bool_t result;
 
-    result = common_fsid(xdr, &args->fsid);
+    result = xdr_fsid(xdr, &args->fsid);
     if (!result) { CBX_ERR("layoutrecall_fsid.fsid"); goto out; }
 out:
     return result;
