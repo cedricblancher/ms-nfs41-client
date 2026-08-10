@@ -36,12 +36,7 @@ bool_t xdr_bitmap4(XDR *xdr, bitmap4 *bitmap);
 bool_t xdr_fattr4(XDR *xdr, fattr4 *fattr);
 bool_t xdr_nfsace4(XDR *xdr, nfsace4 *ace);
 bool_t xdr_limit_by4(XDR *xdr, enum limit_by4 *limitby);
-
-static bool_t common_stateid(XDR *xdr, stateid4 *stateid)
-{
-    return xdr_uint32_t(xdr, &stateid->seqid)
-        && xdr_opaque(xdr, (char*)stateid->other, NFS4_STATEID_OTHER);
-}
+bool_t xdr_stateid4(XDR *xdr, stateid4 *si);
 
 static bool_t common_fh(XDR *xdr, nfs41_fh *fh)
 {
@@ -61,7 +56,7 @@ static bool_t op_cb_open_read_delegation(XDR *xdr,
 {
     bool_t result;
 
-    result = common_stateid(xdr, &delegation->stateid);
+    result = xdr_stateid4(xdr, &delegation->stateid);
     if (!result) { CBX_ERR("push_deleg.delegation.read.stateid"); goto out; }
 
     result = xdr_bool(xdr, &delegation->recalled);
@@ -84,7 +79,7 @@ static bool_t op_cb_open_write_delegation(XDR *xdr,
     uint64_t filesize;
     bool_t result;
 
-    result = common_stateid(xdr, &delegation->stateid);
+    result = xdr_stateid4(xdr, &delegation->stateid);
     if (!result) { CBX_ERR("push_deleg.delegation.write.stateid"); goto out; }
 
     result = xdr_bool(xdr, &delegation->recalled);
@@ -210,7 +205,7 @@ static bool_t op_cb_layoutrecall_file(XDR *xdr, struct cb_recall_file *args)
     result = xdr_uint64_t(xdr, &args->length);
     if (!result) { CBX_ERR("layoutrecall_file.length"); goto out; }
 
-    result = common_stateid(xdr, &args->stateid);
+    result = xdr_stateid4(xdr, &args->stateid);
     if (!result) { CBX_ERR("layoutrecall_file.stateid"); goto out; }
 out:
     return result;
@@ -446,7 +441,7 @@ static bool_t op_cb_recall_args(XDR *xdr, struct cb_recall_args *args)
 {
     bool_t result;
 
-    result = common_stateid(xdr, &args->stateid);
+    result = xdr_stateid4(xdr, &args->stateid);
     if (!result) { CBX_ERR("recall.stateid"); goto out; }
 
     result = xdr_bool(xdr, &args->truncate);
@@ -473,7 +468,7 @@ static bool_t op_cb_notify_args(XDR *xdr, struct cb_notify_args *args)
 {
     bool_t result;
 
-    result = common_stateid(xdr, &args->stateid);
+    result = xdr_stateid4(xdr, &args->stateid);
     if (!result) { CBX_ERR("notify.stateid"); goto out; }
 
     result = common_fh(xdr, &args->fh);
@@ -739,7 +734,7 @@ static bool_t op_cb_offload_write_response(XDR *xdr,
     }
 
     if (response->callback_id_count == 1) {
-        result = common_stateid(xdr, &response->callback_id[0]);
+        result = xdr_stateid4(xdr, &response->callback_id[0]);
         if (!result) {
             CBX_ERR("offload.write_response.callback_id");
             goto out;
@@ -786,7 +781,7 @@ static bool_t op_cb_offload_args(XDR *xdr, struct cb_offload_args *args)
     result = common_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("offload.fh"); goto out; }
 
-    result = common_stateid(xdr, &args->stateid);
+    result = xdr_stateid4(xdr, &args->stateid);
     if (!result) { CBX_ERR("offload.stateid"); goto out; }
 
     result = op_cb_offload_info(xdr, &args->offload_info);
