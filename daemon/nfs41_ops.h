@@ -831,11 +831,17 @@ typedef struct __nfs42_copy_args {
  */
 } nfs42_copy_args;
 
+enum stable_how4 {
+    UNSTABLE4       = 0,
+    DATA_SYNC4      = 1,
+    FILE_SYNC4      = 2
+};
+
 typedef struct __nfs42_write_response {
     uint32_t            callback_id_count;
     stateid4            callback_id[1];
     uint64_t            count;
-    uint32_t            committed; /* stable_how4 */
+    enum stable_how4    committed;
     nfs41_write_verf    *writeverf;
 } nfs42_write_response;
 
@@ -1036,16 +1042,11 @@ typedef struct __nfs41_test_stateid_res {
 
 
 /* OP_WRITE */
-enum stable_how4 {
-    UNSTABLE4       = 0,
-    DATA_SYNC4      = 1,
-    FILE_SYNC4      = 2
-};
 
 typedef struct __nfs41_write_args {
     stateid_arg             *stateid; /* -> nfs41_op_open_res_ok.stateid */
     uint64_t                offset;
-    uint32_t                stable; /* stable_how4 */
+    enum stable_how4        stable;
     uint32_t                data_len;
     unsigned char           *data; /* caller-allocated */
 } nfs41_write_args;

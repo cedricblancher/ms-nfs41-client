@@ -185,6 +185,31 @@ bool_t xdr_fsid(
     return xdr_uint64_t(xdr, &fsid->minor);
 }
 
+/* enum stable_how4 */
+bool_t xdr_stable_how4(
+    XDR *xdr,
+    enum stable_how4 *sh)
+{
+    enum_t value;
+
+    switch (xdr->x_op) {
+        case XDR_ENCODE:
+            value = (enum_t)*sh;
+            return xdr_enum(xdr, &value);
+        case XDR_DECODE:
+            if (!xdr_enum(xdr, &value))
+                return FALSE;
+            *sh = (enum stable_how4)value;
+                return TRUE;
+        case XDR_FREE:
+            return TRUE;
+        default:
+            eprintf("stable_how4: unsupported xdr operation %d\n",
+                (int)xdr->x_op);
+            return FALSE;
+    }
+    /* NOTREACHED */
+}
 
 /* nfs41_component */
 static bool_t encode_component(
@@ -2958,7 +2983,7 @@ static bool_t encode_op_write(
     if (!xdr_uint64_t(xdr, &args->offset))
         return FALSE;
 
-    if (!xdr_uint32_t(xdr, &args->stable))
+    if (!xdr_stable_how4(xdr, &args->stable))
         return FALSE;
 
     if (!xdr_uint32_t(xdr, &args->data_len))

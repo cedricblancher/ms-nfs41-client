@@ -39,6 +39,7 @@ bool_t xdr_limit_by4(XDR *xdr, enum limit_by4 *limitby);
 bool_t xdr_stateid4(XDR *xdr, stateid4 *si);
 bool_t xdr_fh(XDR *xdr, nfs41_fh *fh);
 bool_t xdr_fsid(XDR *xdr, nfs41_fsid *fsid);
+bool_t xdr_stable_how4(XDR *xdr, enum stable_how4 *sh);
 
 static bool_t op_cb_open_read_delegation(XDR *xdr,
     open_delegation4 *delegation)
@@ -733,7 +734,7 @@ static bool_t op_cb_offload_write_response(XDR *xdr,
     result = xdr_uint64_t(xdr, &response->count);
     if (!result) { CBX_ERR("offload.write_response.count"); goto out; }
 
-    result = xdr_uint32_t(xdr, &response->committed);
+    result = xdr_stable_how4(xdr, &response->committed);
     if (!result) { CBX_ERR("offload.write_response.committed"); goto out; }
 
     result = xdr_opaque(xdr, (char *)response->writeverf, NFS4_VERIFIER_SIZE);

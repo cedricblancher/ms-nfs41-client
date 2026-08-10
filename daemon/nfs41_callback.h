@@ -251,7 +251,7 @@ struct cb_offload_write_response {
     uint32_t                callback_id_count;
     stateid4                callback_id[1];
     uint64_t                count;
-    uint32_t                committed; /* stable_how4 */
+    enum stable_how4        committed;
     unsigned char           writeverf[NFS4_VERIFIER_SIZE];
 };
 
