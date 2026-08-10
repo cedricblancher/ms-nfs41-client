@@ -808,9 +808,31 @@ out:
 /* CB_COMPOUND */
 static bool_t cb_compound_tag(XDR *xdr, struct cb_compound_tag *args)
 {
-    return xdr_uint32_t(xdr, &args->len)
-        && args->len <= CB_COMPOUND_MAX_TAG
-        && xdr_opaque(xdr, args->str, args->len);
+    if (!xdr_uint32_t(xdr, &args->len))
+        return FALSE;
+
+    if (args->len >= (CB_COMPOUND_MAX_TAG-1)) {
+        eprintf("cb_compound_tag: CB_COMPOUND tag_len=%lu >= "
+            "(CB_COMPOUND_MAX_TAG-1)=%ld\n",
+            (long)args->len,
+            (long)(CB_COMPOUND_MAX_TAG-1));
+
+        return FALSE;
+    }
+
+    if (!xdr_opaque(xdr, args->str, args->len))
+        return FALSE;
+
+    /*
+     * CB TAG is an XDR counted opaque string, but we also use
+     * it as an ISO C string for debug output. Keep the in-memory copy
+     * '\0'-terminated.
+     */
+    if (xdr->x_op == XDR_DECODE) {
+        args->str[args->len] = '\0';
+    }
+
+    return TRUE;
 }
 
 static const struct xdr_discrim cb_argop_discrim[] = {

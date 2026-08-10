@@ -418,9 +418,9 @@ static void handle_cb_compound(nfs41_rpc_clnt *rpc_clnt, cb_req *req, struct cb_
         goto out;
     }
     res->status = status;
-    StringCchCopyNA(res->tag.str, CB_COMPOUND_MAX_TAG, args.tag.str, args.tag.len);
-    res->tag.str[args.tag.len] = 0;
     res->tag.len = args.tag.len;
+    /* Copy tag string including '\0' added by |cb_compound_tag()| */
+    (void)memcpy(res->tag.str, args.tag.str, (args.tag.len+1));
     res->resarray = calloc(args.argarray_count, sizeof(struct cb_resop));
     if (res->resarray == NULL) {
         res->status = NFS4ERR_SERVERFAULT;
