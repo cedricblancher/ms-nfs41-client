@@ -20,6 +20,7 @@
 
 #include <Windows.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "nfs41_ops.h"
 #include "delegation.h"
@@ -34,6 +35,8 @@
 #define SZDLVL      2   /* dprintf level for "set zero data" logging */
 #define DDLVL       2   /* dprintf level for "duplicate data" logging */
 #define QIDMAPLVL   1   /* dprintf level for "query idmap" logging */
+
+#define COPY_COMMIT_MAX_COUNT (UINT32_MAX)
 
 static int parse_queryallocatedranges(
     const unsigned char *restrict buffer,
@@ -504,6 +507,39 @@ out:
     return status;
 }
 
+static int commit_copied_range(
+    IN nfs41_session *session,
+    IN nfs41_path_fh *file,
+    IN uint64_t offset,
+    IN uint64_t length,
+    IN OUT nfs41_write_verf *verf,
+    OUT nfs41_file_info *info,
+    OUT bool *restrict verifier_mismatch)
+{
+    int status = NFS4_OK;
+
+    *verifier_mismatch = false;
+
+    while (length > 0) {
+        uint32_t count = (length > COPY_COMMIT_MAX_COUNT) ?
+            COPY_COMMIT_MAX_COUNT : (uint32_t)length;
+
+        status = nfs41_commit(session, file, offset, count, TRUE, verf, info);
+        if (status)
+            return status;
+
+        if (!verify_commit(verf)) {
+            *verifier_mismatch = true;
+            return NFS4ERR_IO;
+        }
+
+        offset += count;
+        length -= count;
+    }
+
+    return status;
+}
+
 static
 int duplicate_sparsefile(nfs41_opcodes opcode,
     nfs41_open_state *src_state,
@@ -525,18 +561,22 @@ int duplicate_sparsefile(nfs41_opcodes opcode,
     bool_t hole_seek_sr_eof;
     uint64_t hole_seek_sr_offset;
     size_t i;
+    uint32_t retries = MAX_WRITE_RETRIES;
+    bool verifier_mismatch;
 
     nfs41_path_fh *src_file = &src_state->file;
     nfs41_path_fh *dst_file = &dst_state->file;
     stateid_arg src_stateid;
     stateid_arg dst_stateid;
 
-    (void)memset(info, 0, sizeof(*info));
-
     DPRINTF(DDLVL,
         ("--> duplicate_sparsefile(opcode='%s',src_state->path.path='%s')\n",
         opcode2string(opcode),
         src_state->path.path));
+
+retry_copy_process:
+    verifier_mismatch = false;
+    (void)memset(info, 0, sizeof(*info));
 
     nfs41_open_stateid_arg(src_state, &src_stateid);
     nfs41_open_stateid_arg(dst_state, &dst_stateid);
@@ -637,10 +677,16 @@ int duplicate_sparsefile(nfs41_opcodes opcode,
             uint64_t bytes_written;
             uint64_t bytestowrite = data_size;
             uint64_t writeoffset = 0ULL;
+            uint64_t dst_range_offset = destfileoffset +
+                (data_seek_sr_offset - srcfileoffset);
+            enum stable_how4 committed = DATA_SYNC4;
+            nfs41_write_verf verf;
+            bool need_commit = false;
+
+            (void)memset(&verf, 0, sizeof(verf));
 
             do
             {
-                nfs41_write_verf verf;
                 bytes_written = 0ULL;
 
                 status = nfs42_copy(session,
@@ -649,7 +695,7 @@ int duplicate_sparsefile(nfs41_opcodes opcode,
                     &src_stateid,
                     &dst_stateid,
                     (data_seek_sr_offset + writeoffset),
-                    (destfileoffset + (data_seek_sr_offset-srcfileoffset) + writeoffset),
+                    (dst_range_offset + writeoffset),
                     bytestowrite,
                     &bytes_written,
                     &verf,
@@ -657,10 +703,54 @@ int duplicate_sparsefile(nfs41_opcodes opcode,
                 if (status)
                     break;
 
+                if (!verify_write(&verf, &committed)) {
+                    verifier_mismatch = true;
+                    status = NFS4ERR_IO;
+                    break;
+                }
+
+                if (bytes_written == 0ULL) {
+                    status = NFS4ERR_IO;
+                    break;
+                }
+
+                if (verf.committed == UNSTABLE4)
+                    need_commit = true;
+
                 bytestowrite -= bytes_written;
                 writeoffset += bytes_written;
-                /* FIXME: What should we do with |verf| ? Should we COMMIT this ? */
             } while (bytestowrite > 0ULL);
+
+            if (!status && need_commit) {
+                DPRINTF(DDLVL,
+                    ("duplicate_sparsefile: commit_copied_range: "
+                    "offset=%llu bytecount=%llu "
+                    "retries_left=%lu\n",
+                    (unsigned long long)dst_range_offset,
+                    (unsigned long long)writeoffset,
+                    (unsigned long)retries));
+                status = commit_copied_range(session,
+                    dst_file,
+                    dst_range_offset,
+                    writeoffset,
+                    &verf,
+                    info,
+                    &verifier_mismatch);
+            }
+
+            if (verifier_mismatch) {
+                if (retries-- > 0) {
+                    DPRINTF(0/*DDLVL*/,
+                        ("duplicate_sparsefile: COPY/COMMIT verifier "
+                        "mismatch, retrying whole copy process "
+                        "dst_offset=%llu bytecount=%llu "
+                        "retries_left=%lu\n",
+                        (unsigned long long)destfileoffset,
+                        (unsigned long long)bytecount,
+                        (unsigned long)retries));
+                    goto retry_copy_process;
+                }
+            }
         }
         else if (opcode == NFS41_SYSOP_FSCTL_DUPLICATE_DATA) {
             status = nfs42_clone(session,

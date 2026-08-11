@@ -1,5 +1,5 @@
 /* NFSv4.1 client for Windows
- * Copyright (C) 2024-2025 Roland Mainz <roland.mainz@nrubsig.org>
+ * Copyright (C) 2024-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Roland Mainz <roland.mainz@nrubsig.org>
  *
@@ -203,8 +203,19 @@ int nfs42_copy(
     nfs41_attr_cache_update(session_name_cache(session),
         dst_file->fh.fileid, pinfo);
 
+    /*
+     * We requested |ca_synchronous==TRUE|. A |callback_id != 0| here would
+     * mean the server started an async copy, which we do not implement (yet).
+     */
+    EASSERT(copy_res.u.resok4.response.callback_id_count == 0);
+    if (copy_res.u.resok4.response.callback_id_count != 0) {
+        status = NFS4ERR_IO;
+        goto out;
+    }
+
     nfs41_superblock_space_changed(dst_file->fh.superblock);
 
+    writeverf->committed = copy_res.u.resok4.response.committed;
     *bytes_written = copy_res.u.resok4.response.count;
 
 out:
