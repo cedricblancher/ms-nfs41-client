@@ -38,10 +38,6 @@
 #include "util.h"
 
 
-/* number of times to retry on write/commit verifier mismatch */
-#define MAX_WRITE_RETRIES 6
-
-
 
 #ifdef IOSIZE_STAT
 struct

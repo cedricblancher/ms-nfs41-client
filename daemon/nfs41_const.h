@@ -71,6 +71,12 @@
 #define NFS41_MAX_RPC_REQS      128
 
 /*
+ * |MAX_WRITE_RETRIES| -  Number of times to retry on WRITE/COMMIT,
+ * COPY/COMMIT verifier mismatch
+ */
+#define MAX_WRITE_RETRIES 6
+
+/*
  * |MAX_UTF8_BYTES_PER_WCHAR_T| - Maximum number of bytes required to
  * store one |wchar_t| as UTF-8
  */
