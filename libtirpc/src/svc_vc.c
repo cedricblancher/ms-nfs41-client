@@ -389,8 +389,8 @@ again:
 		if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) == -1)
 			return (FALSE);
 #endif /* _WINTIRPC */
-		if (cd->recvsize > cd->maxrec)
-			cd->recvsize = cd->maxrec;
+		if (cd->recvsize > (u_int)cd->maxrec)
+			cd->recvsize = (u_int)cd->maxrec;
 		cd->nonblock = TRUE;
 		__xdrrec_setnonblock(&cd->xdrs, cd->maxrec);
 	} else
