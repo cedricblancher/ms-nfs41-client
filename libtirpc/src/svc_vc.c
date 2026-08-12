@@ -373,20 +373,28 @@ again:
 	cd->sendsize = r->sendsize;
 	cd->maxrec = r->maxrec;
 
-#ifndef _WINTIRPC
 	if (cd->maxrec != 0) {
+#ifdef _WINTIRPC
+		u_long one = 1;
+		if (ioctlsocket(wintirpc_fd2sockethandle(sock), FIONBIO, &one)) {
+			wintirpc_warnx("rendezvous_request: "
+				"ioctlsocket(sock=%d, FIONBIO, &one) failed, lasterr=%d\n",
+				sock, (int)WSAGetLastError());
+			return (FALSE);
+		}
+#else
 		flags = fcntl(sock, F_GETFL, 0);
 		if (flags  == -1)
 			return (FALSE);
 		if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) == -1)
 			return (FALSE);
+#endif /* _WINTIRPC */
 		if (cd->recvsize > cd->maxrec)
 			cd->recvsize = cd->maxrec;
 		cd->nonblock = TRUE;
 		__xdrrec_setnonblock(&cd->xdrs, cd->maxrec);
 	} else
 		cd->nonblock = FALSE;
-#endif	/* _WINTIRPC */
 
 	gettimeofday(&cd->last_recv_time, NULL);
 
