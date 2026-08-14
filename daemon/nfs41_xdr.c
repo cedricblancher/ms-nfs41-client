@@ -246,7 +246,7 @@ static bool_t decode_component(
 
 
 /* state_owner4 */
-static bool_t xdr_state_owner4(
+bool_t xdr_state_owner4(
     XDR *xdr,
     state_owner4 *so)
 {

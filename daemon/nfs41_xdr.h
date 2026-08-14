@@ -38,6 +38,7 @@ bool_t xdr_fh(XDR *xdr, nfs41_fh *fh);
 bool_t xdr_fsid(XDR *xdr, nfs41_fsid *fsid);
 enum stable_how4;
 bool_t xdr_stable_how4(XDR *xdr, enum stable_how4 *sh);
+bool_t xdr_state_owner4(XDR *xdr, state_owner4 *so);
 
 /* NFSv4.2 ops */
 bool_t encode_op_allocate(XDR *xdr, nfs_argop4 *argop);

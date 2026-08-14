@@ -40,6 +40,7 @@ bool_t xdr_stateid4(XDR *xdr, stateid4 *si);
 bool_t xdr_fh(XDR *xdr, nfs41_fh *fh);
 bool_t xdr_fsid(XDR *xdr, nfs41_fsid *fsid);
 bool_t xdr_stable_how4(XDR *xdr, enum stable_how4 *sh);
+bool_t xdr_state_owner4(XDR *xdr,state_owner4 *so);
 
 static bool_t op_cb_open_read_delegation(XDR *xdr,
     open_delegation4 *delegation)
@@ -163,22 +164,6 @@ static bool_t common_notify4(XDR *xdr, struct notify4 *notify)
 {
     return xdr_bitmap4(xdr, &notify->mask)
         && xdr_bytes(xdr, &notify->list, &notify->len, NFS4_OPAQUE_LIMIT);
-}
-
-static bool_t common_state_owner4(XDR *xdr, state_owner4 *owner)
-{
-    uint64_t clientid = 0;
-    unsigned char *owner_val = owner->owner;
-
-    /* 'owner' is a static array, so do not try to free it */
-    if (xdr->x_op == XDR_FREE)
-        return TRUE;
-
-    if (!xdr_uint64_t(xdr, &clientid))
-        return FALSE;
-
-    return xdr_bytes(xdr, (char **)&owner_val,
-        &owner->owner_len, NFS4_OPAQUE_LIMIT);
 }
 
 /* OP_CB_LAYOUTRECALL */
@@ -589,7 +574,7 @@ static bool_t op_cb_notify_lock_args(XDR *xdr,
     result = xdr_fh(xdr, &args->fh);
     if (!result) { CBX_ERR("notify_lock.fh"); goto out; }
 
-    result = common_state_owner4(xdr, &args->lock_owner);
+    result = xdr_state_owner4(xdr, &args->lock_owner);
     if (!result) { CBX_ERR("notify_lock.lock_owner"); goto out; }
 out:
     return result;
