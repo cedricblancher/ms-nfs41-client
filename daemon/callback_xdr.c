@@ -42,6 +42,16 @@ bool_t xdr_fsid(XDR *xdr, nfs41_fsid *fsid);
 bool_t xdr_stable_how4(XDR *xdr, enum stable_how4 *sh);
 bool_t xdr_state_owner4(XDR *xdr,state_owner4 *so);
 
+/* Local prototypes */
+static bool_t xdr_notify4(XDR *xdr, struct notify4 *notify);
+
+
+static bool_t xdr_notify4(XDR *xdr, struct notify4 *notify)
+{
+    return xdr_bitmap4(xdr, &notify->mask)
+        && xdr_bytes(xdr, &notify->list, &notify->len, NFS4_OPAQUE_LIMIT);
+}
+
 static bool_t op_cb_open_read_delegation(XDR *xdr,
     open_delegation4 *delegation)
 {
@@ -160,11 +170,6 @@ out:
     return result;
 }
 
-static bool_t common_notify4(XDR *xdr, struct notify4 *notify)
-{
-    return xdr_bitmap4(xdr, &notify->mask)
-        && xdr_bytes(xdr, &notify->list, &notify->len, NFS4_OPAQUE_LIMIT);
-}
 
 /* OP_CB_LAYOUTRECALL */
 static bool_t op_cb_layoutrecall_file(XDR *xdr, struct cb_recall_file *args)
@@ -451,7 +456,7 @@ static bool_t op_cb_notify_args(XDR *xdr, struct cb_notify_args *args)
 
     result = xdr_array(xdr, (char **)&args->changes,
         &args->change_count, CB_COMPOUND_MAX_OPERATIONS,
-        sizeof(struct notify4), (xdrproc_t)common_notify4);
+        sizeof(struct notify4), (xdrproc_t)xdr_notify4);
     if (!result) { CBX_ERR("notify.changes"); goto out; }
 out:
     return result;
@@ -629,7 +634,7 @@ static bool_t op_cb_notify_deviceid_args(XDR *xdr, struct cb_notify_deviceid_arg
     /* decode the generic notify4 list */
     result = xdr_array(xdr, (char**)&args->notify_list,
         &args->notify_count, CB_COMPOUND_MAX_OPERATIONS,
-        sizeof(struct notify4), (xdrproc_t)common_notify4);
+        sizeof(struct notify4), (xdrproc_t)xdr_notify4);
     if (!result) { CBX_ERR("notify_deviceid.notify_list"); goto out; }
 
     switch (xdr->x_op) {
