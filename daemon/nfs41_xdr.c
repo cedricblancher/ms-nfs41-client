@@ -145,6 +145,10 @@ bool_t xdr_stateid4(
     if (!xdr_uint32_t(xdr, &si->seqid))
         return FALSE;
 
+    /* |stateid4.other| is a static array, so do not try to free it */
+    if (xdr->x_op == XDR_FREE)
+        return TRUE;
+
     return xdr_opaque(xdr, (char *)si->other, NFS4_STATEID_OTHER);
 }
 
@@ -158,6 +162,10 @@ bool_t xdr_fattr4(
     if (!xdr_bitmap4(xdr, &fattr->attrmask))
         return FALSE;
 
+    /* |fattr4.attr_vals| is a static array, so do not try to free it */
+    if (xdr->x_op == XDR_FREE)
+        return TRUE;
+
     return xdr_bytes(xdr,
         (char **)&attr_vals,
         &fattr->attr_vals_len,
@@ -169,6 +177,10 @@ bool_t xdr_fh(
     XDR *xdr,
     nfs41_fh *fh)
 {
+    /* |nfs41_fh.fh| is a static array, so do not try to free it */
+    if (xdr->x_op == XDR_FREE)
+        return TRUE;
+
     return xdr_uint32_t(xdr, &fh->len)
         && (fh->len <= NFS4_FHSIZE)
         && xdr_opaque(xdr, (char*)fh->fh, fh->len);
@@ -238,22 +250,24 @@ static bool_t xdr_state_owner4(
     XDR *xdr,
     state_owner4 *so)
 {
-    u_quad_t clientid = 0;
-    unsigned char *owner = so->owner;
+    uint64_t clientid = 0;
+    unsigned char *owner_val = so->owner;
 
-    /* 18.16.3. "The client can set the clientid field to any value and
+    /*
+     * 18.16.3. "The client can set the clientid field to any value and
      * the server MUST ignore it.  Instead the server MUST derive the
      * client ID from the session ID of the SEQUENCE operation of the
-     * COMPOUND request. */
-    if (xdr->x_op == XDR_ENCODE) {
-        if (!xdr_uint64_t(xdr, &clientid)) /* clientid = 0 */
-            return FALSE;
-    } else if (xdr->x_op == XDR_DECODE) {
-        if (!xdr_uint64_t(xdr, &clientid))
-            return FALSE;
-    } else return FALSE;
+     * COMPOUND request.
+     */
+    if (!xdr_uint64_t(xdr, &clientid))
+        return FALSE;
 
-    return xdr_bytes(xdr, (char **)&owner, &so->owner_len, NFS4_OPAQUE_LIMIT);
+    /* |state_owner4.owner| is a static array, so do not try to free it */
+    if (xdr->x_op == XDR_FREE)
+        return TRUE;
+
+    return xdr_bytes(xdr, (char **)&owner_val,
+        &so->owner_len, NFS4_OPAQUE_LIMIT);
 }
 
 static bool_t xdr_layout_types(
@@ -726,6 +740,13 @@ static bool_t xdr_server_owner4(
 
     if (!xdr_uint64_t(xdr, &so->so_minor_id))
         return FALSE;
+
+    /*
+     * |server_owner4.so_major_id| is a static array, so do not try
+     * to free it
+     */
+    if (xdr->x_op == XDR_FREE)
+        return TRUE;
 
     return xdr_bytes(xdr, (char **)&so_major_id,
         &so->so_major_id_len, NFS4_OPAQUE_LIMIT);
@@ -2998,6 +3019,10 @@ static bool_t xdr_write_verf(
 {
     if (!xdr_enum(xdr, (enum_t *)&verf->committed))
         return FALSE;
+
+    /* |nfs41_write_verf.verf| is a static array, so do not try to free it */
+    if (xdr->x_op == XDR_FREE)
+        return TRUE;
 
     return xdr_opaque(xdr, (char *)verf->verf, NFS4_VERIFIER_SIZE);
 }
