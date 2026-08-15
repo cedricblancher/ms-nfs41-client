@@ -1255,6 +1255,27 @@ rm /cygdrive/n/winntfs_filedisk_001.img
 
 
 #
+# OFSMount - mount files containing disk images as physical disks
+#
+# See https://www.osforensics.com/tools/mount-disk-images.html
+#
+---- snip ----
+# create sparse 2TB file
+truncate -s $((2*1024*1024*1024*1024)) x8.img
+chmod a+rw x8.img
+
+# ofsmount: Select x8.img and "mount entire image as virtual disk", then unmark "Read-only drive" and select "Drive emulation: Physical Disk Emulation", and select "Drive: HDD", and then "Write Mode: direct", then click on "Mount"
+# ofsmount should then mount the new drive as "\\.\PhysicalDisk<integer>", where <integer> is a drive number
+
+# use the driver number ("8" in this example) to add a GPT header to the disk:
+powershell -Command 'Initialize-Disk -Number 8 -PartitionStyle GPT -PassThru'
+
+# use the driver number ("8" in this example) to format the drive with NTFS:
+powershell -Command 'Get-Disk 8 | Clear-Disk -RemoveData -Confirm:$false -PassThru | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -UseMaximumSize -DriveLetter O | Format-Volume -FileSystem NTFS -NewFileSystemLabel "DATA3" -Confirm:$false'
+---- snip ----
+
+
+#
 # OpenZFS - create ZFS filesystem with NFSv4.2 sparse file as storage
 #
 

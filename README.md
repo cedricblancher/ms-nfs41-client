@@ -250,6 +250,11 @@ NFSv4.2/NFSv4.1 filesystem driver for Windows 10/11 & Windows Server
 - Support for hosting filesystems (like
   [OpenZFS](https://openzfsonwindows.org/)) as (sparse) files
 
+- Support for hosting virtual disks as (sparse files) via
+  `filedisk-sparse` (<https://github.com/gisburn/filedisk-sparse/>),
+  `OFSMount`
+  (<https://www.osforensics.com/tools/mount-disk-images.html>), …
+
 - Software compatibility:
 
   - Any NFSv4.2/NFSv4.1 server (Linux, Solaris, Illumos, FreeBSD, nfs4j,
@@ -849,15 +854,19 @@ Within WSL mount UNC path returned by `/sbin/nfs_mount`
   filesystems as storage. It seems the Windows code makes explicit
   checks for SMB filesystems, and rejects any non-SMB filesystems.
 
-  As an alternative `filedisk-sparse`
-  (<https://github.com/gisburn/filedisk-sparse/>) can be used to mount
-  (sparse) files as disks or CDROM images.
+  There are two tested alternatives:
 
-  This can also be used to host per-machine software installations/data
-  storage (e.g. use
-  `filedisk /mount 35 'N:\winntfs_filedisk_003.img' S:` as global mount
-  which require NTFS or ReFS, but should be physically hosted on the NFS
-  server.
+  - `filedisk-sparse` (<https://github.com/gisburn/filedisk-sparse/>)
+    can be used to mount (sparse) files as disks or CDROM images.
+
+    This can also be used to host per-machine software
+    installations/data storage (e.g. use
+    `filedisk /mount 35 'N:\winntfs_filedisk_003.img' S:` as global
+    mount which require NTFS or ReFS, but should be physically hosted on
+    the NFS server.
+
+  - `OFSMount`
+    (<https://www.osforensics.com/tools/mount-disk-images.html>)
 
 - Creating a new Win32 file/dir with an ACL only works with NFS servers
   which support `FATTR4_ACL`/`FATTR4_DACL` for `OPEN`/`CREATE`

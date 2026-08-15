@@ -282,6 +282,15 @@
         <para>Support for hosting filesystems (like <link xl:href="https://openzfsonwindows.org/">OpenZFS</link>) as (sparse) files</para>
       </listitem>
       <listitem>
+        <para>Support for hosting virtual disks as (sparse files) via
+          <simplelist type="inline">
+            <member><literal>filedisk-sparse</literal> (<link xl:href="https://github.com/gisburn/filedisk-sparse/">https://github.com/gisburn/filedisk-sparse/</link>)</member>
+            <member><literal>OFSMount</literal> (<link xl:href="https://www.osforensics.com/tools/mount-disk-images.html">https://www.osforensics.com/tools/mount-disk-images.html</link>)</member>
+            <member>&#x2026;</member>
+          </simplelist>
+        </para>
+      </listitem>
+      <listitem>
         <para>Software compatibility:
           <itemizedlist>
             <listitem>
@@ -969,12 +978,21 @@ Datei befindet. Versuchen Sie, die Datei woanders zu speichern.</programlisting>
         currently (Win10, Win11) cannot use files on ms-nfs41-client/NFSv4 filesystems as storage.
         It seems the Windows code makes explicit checks for SMB filesystems,
         and rejects any non-SMB filesystems.</para>
-        <para>As an alternative <literal>filedisk-sparse</literal>
-        (<link xl:href="https://github.com/gisburn/filedisk-sparse/">https://github.com/gisburn/filedisk-sparse/</link>)
-        can be used to mount (sparse) files as disks or CDROM images.</para>
-        <para>This can also be used to host per-machine software installations/data storage (e.g. use
-        <command>filedisk /mount 35 'N:\winntfs_filedisk_003.img' S:</command> as global mount
-        which require NTFS or ReFS, but should be physically hosted on the NFS server.</para>
+        <para>There are two tested alternatives:
+          <itemizedlist>
+            <listitem>
+              <para><literal>filedisk-sparse</literal>
+              (<link xl:href="https://github.com/gisburn/filedisk-sparse/">https://github.com/gisburn/filedisk-sparse/</link>)
+              can be used to mount (sparse) files as disks or CDROM images.</para>
+              <para>This can also be used to host per-machine software installations/data storage (e.g. use
+              <command>filedisk /mount 35 'N:\winntfs_filedisk_003.img' S:</command> as global mount
+              which require NTFS or ReFS, but should be physically hosted on the NFS server.</para>
+            </listitem>
+            <listitem><para><literal>OFSMount</literal>
+              (<link xl:href="https://www.osforensics.com/tools/mount-disk-images.html">https://www.osforensics.com/tools/mount-disk-images.html</link>)</para>
+            </listitem>
+          </itemizedlist>
+        </para>
       </listitem>
       <listitem>
         <para>Creating a new Win32 file/dir with an ACL only works with NFS servers which support
