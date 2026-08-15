@@ -437,4 +437,13 @@
  */
 #define NFS41_DRIVER_MOUNT_UNCTAGNUMS 1
 
+/*
+ * |NFS41_DRIVER_WORKAROUND_LINUX_NFSD_CB_RECALL_ANY_KEEP_ZERO_COUNT| -
+ * workaround for the Linux nfsd bug where CB_RECALL_ANY is send with a
+ * |objects_to_keep==0|, which would recall ALL delegations.
+ * The workaround is to treat this as |objects_to_keep==0|, and return ONE
+ * delegation, like the Linux nfs client did before Linux 7.3.
+ */
+#define NFS41_DRIVER_WORKAROUND_LINUX_NFSD_CB_RECALL_ANY_KEEP_ZERO_COUNT 1
+
 #endif /* !_NFS41_DRIVER_BUILDFEATURES_ */

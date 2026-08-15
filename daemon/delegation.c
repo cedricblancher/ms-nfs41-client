@@ -21,6 +21,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  */
 
+#include "nfs41_build_features.h"
 #include "delegation.h"
 #include "nfs41_ops.h"
 #include "name_cache.h"
@@ -832,6 +833,18 @@ int nfs41_client_delegation_recall_any(
 
     if (!recall_read_delegs && !recall_write_delegs)
         goto out;
+
+#ifdef NFS41_DRIVER_WORKAROUND_LINUX_NFSD_CB_RECALL_ANY_KEEP_ZERO_COUNT
+    /*
+     * Workaround for the Linux nfsd bug where CB_RECALL_ANY is send with a
+     * |objects_to_keep==0|, which would recall ALL delegations.
+     * The workaround is to treat this as |objects_to_keep==0|, and return
+     * ONE delegation, like the Linux nfs client did before Linux 7.3.
+     */
+    if (objects_to_keep == 0) {
+        objects_to_keep = 1;
+    }
+#endif /* NFS41_DRIVER_WORKAROUND_LINUX_NFSD_CB_RECALL_ANY_KEEP_ZERO_COUNT */
 
     EnterCriticalSection(&client->state.lock);
     list_for_each(entry, &client->state.delegations) {
