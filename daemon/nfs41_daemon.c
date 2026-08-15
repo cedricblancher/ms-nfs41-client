@@ -219,8 +219,9 @@ static unsigned int WINAPI nfsd_thread_main(void *args)
     __try {
         res = nfsd_worker_thread_main(args);
     }
-    __except(EXCEPTION_EXECUTE_HANDLER ) {
-        eprintf("#### FATAL: Worker thread crashed with exception ####\n");
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        eprintf("#### FATAL: nfsd_thread_main(): "
+            "thread crashed with exception ####\n");
     }
 
     return res;

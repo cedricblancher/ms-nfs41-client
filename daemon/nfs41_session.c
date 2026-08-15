@@ -1,5 +1,6 @@
 /* NFSv4.1 client for Windows
- * Copyright © 2012 The Regents of the University of Michigan
+ * Copyright (C) 2012 The Regents of the University of Michigan
+ * Copyright (C) 2023-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Olga Kornievskaia <aglo@umich.edu>
  * Casey Bodley <cbodley@umich.edu>
@@ -229,14 +230,15 @@ void nfs41_session_sequence(
 
 
 /* session renewal */
-static unsigned int WINAPI renew_session_thread(void *args)
+static unsigned int WINAPI renew_session_thread_main(void *args)
 {
     nfs41_session *session = (nfs41_session *)args;
     int status = NO_ERROR;
     int event_status;
 
-    DPRINTF(1, ("renew_session_thread(session=0x%p): started thread 0x%p\n",
-        session, session->renew.thread_handle));
+    DPRINTF(1,
+        ("renew_session_thread_main(session=0x%p): started thread 0x%p\n",
+        (void *)session, (void *)session->renew.thread_handle));
 
     /* sleep for 2/3 of lease_time */
     const uint32_t sleep_time = (2UL * session->lease_time*1000UL)/3UL;
@@ -245,9 +247,9 @@ static unsigned int WINAPI renew_session_thread(void *args)
     EASSERT(sleep_time < (60*60*1000UL));
 
     while(1) {
-        DPRINTF(1, ("renew_session_thread(session=0x%p): "
+        DPRINTF(1, ("renew_session_thread_main(session=0x%p): "
             "Going to sleep for %dmsecs\n",
-            session, (int)sleep_time));
+            (void *)session, (int)sleep_time));
 
         /*
          * sleep for |sleep_time| milliseconds, or until someone
@@ -256,14 +258,14 @@ static unsigned int WINAPI renew_session_thread(void *args)
         event_status = WaitForSingleObjectEx(session->renew.cancel_event,
             sleep_time, FALSE);
         if (event_status == WAIT_TIMEOUT) {
-            DPRINTF(1, ("renew_session_thread(session=0x%p): "
+            DPRINTF(1, ("renew_session_thread_main(session=0x%p): "
                 "renewing session...\n",
-                session));
+                (void *)session));
             status = nfs41_send_sequence(session);
             if (status) {
                 eprintf("renew_session_thread(session=0x%p): "
                     "nfs41_send_sequence() failed status=%d\n",
-                    session, status);
+                    (void *)session, status);
             }
         }
         else if (event_status == WAIT_OBJECT_0) {
@@ -271,15 +273,31 @@ static unsigned int WINAPI renew_session_thread(void *args)
             break;
         }
         else {
-            eprintf("renew_session_thread(session=0x%p): "
+            eprintf("renew_session_thread_main(session=0x%p): "
                 "unexpected event_status=0x%x\n",
                 session, (int)event_status);
         }
     }
 
-    DPRINTF(1, ("renew_session_thread(session=0x%p): thread 0x%p exiting\n",
-        session, session->renew.thread_handle));
+    DPRINTF(1,
+        ("renew_session_thread_main(session=0x%p): thread 0x%p exiting\n",
+        (void *)session, (void *)session->renew.thread_handle));
     return 0;
+}
+
+static unsigned int WINAPI renew_session_thread(void *args)
+{
+    unsigned int res = 120 /* fixme: semi-random value */;
+
+    __try {
+        res = renew_session_thread_main(args);
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        eprintf("#### FATAL: renew_session_thread(): "
+            "thread crashed with exception ####\n");
+    }
+
+    return res;
 }
 
 /* session creation */

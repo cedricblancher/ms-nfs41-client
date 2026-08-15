@@ -683,7 +683,8 @@ struct recall_thread_args {
     bool_t                  truncate;
 };
 
-static unsigned int WINAPI delegation_recall_thread(void *args)
+
+static unsigned int WINAPI delegation_recall_thread_main(void *args)
 {
     struct recall_thread_args *recall = (struct recall_thread_args*)args;
 
@@ -694,6 +695,21 @@ static unsigned int WINAPI delegation_recall_thread(void *args)
     nfs41_root_deref(recall->client->root);
     free(recall);
     return 0;
+}
+
+static unsigned int WINAPI delegation_recall_thread(void *args)
+{
+    unsigned int res = 120 /* fixme: semi-random value */;
+
+    __try {
+        res = delegation_recall_thread_main(args);
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        eprintf("#### FATAL: delegation_recall_thread(): "
+            "thread crashed with exception ####\n");
+    }
+
+    return res;
 }
 
 static int deleg_stateid_cmp(const struct list_entry *entry, const void *value)
