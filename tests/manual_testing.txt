@@ -101,11 +101,11 @@
 #
 # - A timeserver shoud be running on both Windows (NFSv4.2/NFSv4.1
 #   client and NFSv4.2/NFSv4.1 server).
-#   For example on Windows add timeserver 10.49.0.6 like this:
+#   For example on Windows add timeserver 10.49.0.9 like this:
 #   ---- snip ----
 #   sc config w32time start=auto
 #   sc start w32time
-#   w32tm /config /update /manualpeerlist:10.49.0.6
+#   w32tm /config /update /manualpeerlist:10.49.0.9
 #   ---- snip ----
 #   (see https://stackoverflow.com/questions/22862236/how-to-sync-windows-time-from-a-ntp-time-server-in-command)
 #   On Linux use xntpd or timesyncd (/etc/systemd/timesyncd.conf)
