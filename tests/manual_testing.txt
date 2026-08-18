@@ -1260,12 +1260,13 @@ rm /cygdrive/n/winntfs_filedisk_001.img
 # See https://www.osforensics.com/tools/mount-disk-images.html
 #
 ---- snip ----
-# create sparse 2TB file
-truncate -s $((2*1024*1024*1024*1024)) x8.img
+# create sparse 128GB file
+# (2TB does not work with ofsmount v3.3.1000 from 11 Aug 2026)
+truncate -s $((128*1024*1024*1024)) x8.img
 chmod a+rw x8.img
 
-# ofsmount: Select x8.img and "mount entire image as virtual disk", then unmark "Read-only drive" and select "Drive emulation: Physical Disk Emulation", and select "Drive: HDD", and then "Write Mode: direct", then click on "Mount"
-# ofsmount should then mount the new drive as "\\.\PhysicalDisk<integer>", where <integer> is a drive number
+# mount sparse file "x8.img" as backing store as physical hd disk read/write
+'/cygdrive/c/Program Files/OSFMount/osfmount.com' -a -t file -f "$(cygpath -w "$PWD/x8.img")" -o rw -o physical -o hd
 
 # use the driver number ("8" in this example) to add a GPT header to the disk:
 powershell -Command 'Initialize-Disk -Number 8 -PartitionStyle GPT -PassThru'
