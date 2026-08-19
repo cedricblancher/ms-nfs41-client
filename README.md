@@ -267,7 +267,7 @@ NFSv4.2/NFSv4.1 filesystem driver for Windows 10/11 & Windows Server
   - [uutils CoreUtils](https://github.com/uutils/coreutils/)
 
   - Visual Studio (tested: VS2019 Community, VS2022 Community, VS2026
-    Community Insiders)
+    Community)
 
   - [OpenZFS](https://openzfsonwindows.org/) - Supports ZFS pools stored
     as NFS (sparse) files, hosting...
@@ -1007,19 +1007,43 @@ Source code can be obtained from
   - PanDoc document converter, from
     <https://github.com/jgm/pandoc/releases/download/3.7.0.1/pandoc-3.7.0.1-windows-x86_64.msi>
 
-- **Option 3 (EXPERIMENTAL):** Windows 10 with Visual Studio 2026
-  Community Insiders
+- **Option 3:** Windows 11 with Visual Studio 2026 Community
 
-  - Start Visual Studio 2026 installer and import the installer config
-    file `ms-nfs41-client/build.vc19/ms-nfs41-client_vs2026.vsconfig`,
-    and then install Visual Studio 2026 Community Insiders.
+  - Compiler:
 
-  - WDK for Windows 10, version 2004, from
-    <https://go.microsoft.com/fwlink/?linkid=2128854>, and then copy the
-    `Microsoft.DriverKit.Build.Tasks.16.0.dll` to
-    `Microsoft.DriverKit.Build.Tasks.18.0.dll`:
+    - **Option 2a:**Use GUI installer
 
-        cp '/cygdrive/c/Program Files (x86)/Windows Kits/10/build/bin/Microsoft.DriverKit.Build.Tasks.16.0.dll' '/cygdrive/c/Program Files (x86)/Windows Kits/10/build/bin/Microsoft.DriverKit.Build.Tasks.18.0.dll'
+      Start Visual Studio 2026 installer and import the installer config
+      file `ms-nfs41-client/build.vc19/ms-nfs41-client_vs2026.vsconfig`,
+      and then install Visual Studio.
+
+      > [!NOTE]
+      > Due to a bug in the VS installer, it is sometimes required to
+      > manually add another (random) component to be installed;
+      > otherwise, the imported config might be ignored.
+
+    - **Option 2b:**Use command-line
+
+      <div class="example">
+
+      <div class="title">
+
+      Install VS2026 Community Edition from a Cygwin Administrator shell
+
+      </div>
+
+      ``` bash
+      # get Visual Studio 2026 installer config
+      wget 'https://raw.githubusercontent.com/kofemann/ms-nfs41-client/refs/heads/master/build.vc19/ms-nfs41-client_vs2026.vsconfig'
+
+      # install Visual Studio 2026 via winget(1)
+      winget install -e --id Microsoft.VisualStudio.Community --version 18.0.0 --silent --accept-package-agreements --accept-source-agreements --override "--quiet --wait --norestart --config \"$(cygpath -w "$PWD/ms-nfs41-client_vs2026.vsconfig")\""
+      ```
+
+      </div>
+
+  - WDK for Windows 11, version 10.0.28000.2526, from
+    <https://go.microsoft.com/fwlink/?LinkId=2371554>
 
   - Cygwin 64bit \>= 3.5.0
 
@@ -1062,11 +1086,11 @@ Source code can be obtained from
       make installdest64
       make bintarball64
 
-- **Windows 10: Using Visual Studio 2026 Community Insiders+Cygwin
-  command line (bash/ksh93):**
+- **Windows 11: Using Visual Studio 2026+Cygwin command line
+  (bash/ksh93):**
 
-      # this creates a 32bit+kernel+64bit-kernel build for Windows 10+11
-      export PATH="/cygdrive/c/Program Files/Microsoft Visual Studio/18/Insiders/MSBuild/Current/Bin/:$PATH"
+      # this creates a 64bit-kernel only build for Windows 11
+      export PATH="/cygdrive/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/:$PATH"
       git clone https://github.com/kofemann/ms-nfs41-client.git
       cd ms-nfs41-client
       # "retarget" VS platform toolset to "v145"
@@ -1075,9 +1099,9 @@ Source code can be obtained from
       cd cygwin
       # get default WDK Test Certificate SHA1 ThumbPrint value for code signing
       export CERTIFICATE_THUMBPRINT="$(powershell -c 'Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object {$_.Subject -like "*WDKTestCert*"} | Select-Object -ExpandProperty Thumbprint')"
-      make build
-      make installdest
-      make bintarball
+      make build64
+      make installdest64
+      make bintarball64
 
 > [!NOTE]
 > `make installdest` or `make installdest64` can fail on SMB/NFSv4.1

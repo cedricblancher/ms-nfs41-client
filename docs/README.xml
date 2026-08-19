@@ -306,7 +306,7 @@
               <para><link xl:href="https://github.com/uutils/coreutils/">uutils CoreUtils</link></para>
             </listitem>
             <listitem>
-              <para>Visual Studio (tested: VS2019 Community, VS2022 Community, VS2026 Community Insiders)</para>
+              <para>Visual Studio (tested: VS2019 Community, VS2022 Community, VS2026 Community)</para>
             </listitem>
             <listitem>
               <para><link xl:href="https://openzfsonwindows.org/">OpenZFS</link> - Supports ZFS pools stored as NFS (sparse) files, hosting...
@@ -1133,18 +1133,36 @@ winget install -e --id Microsoft.VisualStudio.2022.Community --silent --accept-p
             </itemizedlist>
           </listitem>
           <listitem>
-            <para><emphasis role="bold">Option 3 (EXPERIMENTAL):</emphasis> Windows 10 with Visual Studio 2026 Community Insiders</para>
+            <para><emphasis role="bold">Option 3:</emphasis> Windows 11 with Visual Studio 2026 Community</para>
             <itemizedlist>
               <listitem>
-                <para>Start Visual Studio 2026 installer and import the installer config file
-                <filename>ms-nfs41-client/build.vc19/ms-nfs41-client_vs2026.vsconfig</filename>,
-                and then install Visual Studio 2026 Community Insiders.</para>
+                <para>Compiler:</para>
+                <itemizedlist>
+                  <listitem>
+                    <para><emphasis role="bold">Option 2a:</emphasis>Use GUI installer</para>
+                    <para>Start Visual Studio 2026 installer and import the installer config file
+                    <filename>ms-nfs41-client/build.vc19/ms-nfs41-client_vs2026.vsconfig</filename>, and then install Visual Studio.</para>
+                    <note>
+                      <para>Due to a bug in the VS installer, it is sometimes required to manually add another (random) component to be installed; otherwise, the imported config might be ignored.</para>
+                    </note>
+                  </listitem>
+
+                  <listitem>
+                    <para><emphasis role="bold">Option 2b:</emphasis>Use command-line</para>
+                    <example>
+                      <title>Install VS2026 Community Edition from a Cygwin Administrator shell</title>
+                      <programlisting language="bash"># get Visual Studio 2026 installer config
+wget 'https://raw.githubusercontent.com/kofemann/ms-nfs41-client/refs/heads/master/build.vc19/ms-nfs41-client_vs2026.vsconfig'
+
+# install Visual Studio 2026 via winget(1)
+winget install -e --id Microsoft.VisualStudio.Community --version 18.0.0 --silent --accept-package-agreements --accept-source-agreements --override "--quiet --wait --norestart --config \"$(cygpath -w "$PWD/ms-nfs41-client_vs2026.vsconfig")\""
+</programlisting>
+                    </example>
+                  </listitem>
+                </itemizedlist>
               </listitem>
               <listitem>
-                <para>WDK for Windows 10, version 2004, from <link xl:href="https://go.microsoft.com/fwlink/?linkid=2128854">https://go.microsoft.com/fwlink/?linkid=2128854</link>,
-                and then copy the <filename>Microsoft.DriverKit.Build.Tasks.16.0.dll</filename> to <filename>Microsoft.DriverKit.Build.Tasks.18.0.dll</filename>:
-                <programlisting>cp '/cygdrive/c/Program Files (x86)/Windows Kits/10/build/bin/Microsoft.DriverKit.Build.Tasks.16.0.dll' '/cygdrive/c/Program Files (x86)/Windows Kits/10/build/bin/Microsoft.DriverKit.Build.Tasks.18.0.dll'</programlisting>
-                </para>
+                <para>WDK for Windows 11, version 10.0.28000.2526, from <link xl:href="https://go.microsoft.com/fwlink/?LinkId=2371554">https://go.microsoft.com/fwlink/?LinkId=2371554</link></para>
               </listitem>
               <listitem>
                 <para>Cygwin 64bit &gt;= 3.5.0</para>
@@ -1193,9 +1211,9 @@ make installdest64
 make bintarball64</programlisting>
           </listitem>
           <listitem>
-            <para><emphasis role="bold">Windows 10: Using Visual Studio 2026 Community Insiders+Cygwin command line (bash/ksh93):</emphasis></para>
-            <programlisting># this creates a 32bit+kernel+64bit-kernel build for Windows 10+11
-export PATH="/cygdrive/c/Program Files/Microsoft Visual Studio/18/Insiders/MSBuild/Current/Bin/:$PATH"
+            <para><emphasis role="bold">Windows 11: Using Visual Studio 2026+Cygwin command line (bash/ksh93):</emphasis></para>
+            <programlisting># this creates a 64bit-kernel only build for Windows 11
+export PATH="/cygdrive/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/:$PATH"
 git clone https://github.com/kofemann/ms-nfs41-client.git
 cd ms-nfs41-client
 # "retarget" VS platform toolset to "v145"
@@ -1204,9 +1222,9 @@ sed -i -E 's/&lt;PlatformToolset&gt;v...&lt;\/PlatformToolset&gt;/&lt;PlatformTo
 cd cygwin
 # get default WDK Test Certificate SHA1 ThumbPrint value for code signing
 export CERTIFICATE_THUMBPRINT="$(powershell -c 'Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object {$_.Subject -like "*WDKTestCert*"} | Select-Object -ExpandProperty Thumbprint')"
-make build
-make installdest
-make bintarball</programlisting>
+make build64
+make installdest64
+make bintarball64</programlisting>
           </listitem>
 
         </itemizedlist>
