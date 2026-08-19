@@ -289,11 +289,12 @@ $(PROJECT_BASEDIR_DIR)/README.html: $(PROJECT_BASEDIR_DIR)/docs/README.xml
 		$(PROJECT_BASEDIR_DIR)/docs/README.xml
 
 # README.md rule is not part of the default build as Cygwin does not have a pandoc package
+# (note: pandoc 2.9 requires --table-of-contents without arguments)
 $(PROJECT_BASEDIR_DIR)/README.md: $(PROJECT_BASEDIR_DIR)/docs/README.xml
 	pandoc \
 		-f docbook \
 		-t gfm \
-		--table-of-contents=true \
+		--table-of-contents \
 		-s "$$(cygpath -w "$(PROJECT_BASEDIR_DIR)/docs/README.xml")" \
 		-o "$$(cygpath -w "$(PROJECT_BASEDIR_DIR)/README.md")"
 	# make sure we always use UNIX line endings
