@@ -945,7 +945,8 @@ Source code can be obtained from
 
 #### Required Software
 
-- **Option 1:** Windows 10 with Visual Studio 2019 Community
+- **Option 1:** Windows 10 (32bit+64bit) with Visual Studio 2019
+  Community
 
   - Start Visual Studio 2019 installer and import the installer config
     file `ms-nfs41-client/build.vc19/ms-nfs41-client_vs2019.vsconfig`,
@@ -961,8 +962,11 @@ Source code can be obtained from
 
   - Cygwin 64bit \>= 3.5.0
 
-  - PanDoc document converter, from
-    <https://github.com/jgm/pandoc/releases/download/3.7.0.1/pandoc-3.7.0.1-windows-x86_64.msi>
+  - - Windows 64bit: PanDoc document converter, from
+      <https://github.com/jgm/pandoc/releases/download/3.7.0.1/pandoc-3.7.0.1-windows-x86_64.msi>
+
+    - Windows 32bit: PanDoc document converter, from
+      <https://github.com/jgm/pandoc/releases/download/2.9.2.1/pandoc-2.9.2.1-windows-i386.msi>
 
 - **Option 2:** Windows 11 with Visual Studio 2022 Community
 
@@ -1052,10 +1056,10 @@ Source code can be obtained from
 
 #### Build the Project
 
-- **Windows 10: Using Visual Studio 2019+Cygwin command line
-  (bash/ksh93):**
+- **Windows 10/64bit 64bit+32bit build: Using Visual Studio 2019+Cygwin
+  command line (bash/ksh93):**
 
-      # this creates a 32bit+kernel+64bit-kernel build for Windows 10+11
+      # this creates a 32bit-kernel+64bit-kernel build for Windows 10 (64bit+32bit kernels)+Windows 11
       export PATH="/cygdrive/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin/:$PATH"
       git clone https://github.com/kofemann/ms-nfs41-client.git
       cd ms-nfs41-client
@@ -1068,6 +1072,23 @@ Source code can be obtained from
       make build
       make installdest
       make bintarball
+
+- **Windows 10/32bit 32bit-only build: Using Visual Studio 2019+Cygwin
+  command line (bash/ksh93):**
+
+      # this creates a 32bit-only build for Windows 10 (32bit kernel only)
+      export PATH="/cygdrive/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin/:$PATH"
+      git clone https://github.com/kofemann/ms-nfs41-client.git
+      cd ms-nfs41-client
+      # "retarget" VS platform toolset to "v142"
+      # ("v142" should remain the default when comitting)
+      sed -i -E 's/<PlatformToolset>v...<\/PlatformToolset>/<PlatformToolset>v142<\/PlatformToolset>/g' $(find 'build.vc19' -name \*.vcxproj)
+      cd cygwin
+      # get default WDK Test Certificate SHA1 ThumbPrint value for code signing
+      export CERTIFICATE_THUMBPRINT="$(powershell -c 'Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object {$_.Subject -like "*WDKTestCert*"} | Select-Object -ExpandProperty Thumbprint')"
+      make build32
+      make installdest32
+      make bintarball32
 
 - **Windows 11: Using Visual Studio 2022+Cygwin command line
   (bash/ksh93):**
