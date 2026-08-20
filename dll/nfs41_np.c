@@ -336,13 +336,13 @@ static DWORD StoreConnectionInfo(
     pNfs41NetResource->ConnectionNameLength = ConnectionNameLength;
 
     (void)StringCchCopyW(pNfs41NetResource->LocalName,
-        pNfs41NetResource->LocalNameLength,
+        (pNfs41NetResource->LocalNameLength/sizeof(WCHAR)),
         LocalName);
     (void)StringCchCopyW(pNfs41NetResource->RemoteName,
-        pNfs41NetResource->RemoteNameLength,
+        (pNfs41NetResource->RemoteNameLength/sizeof(WCHAR)),
         lpNetResource->lpRemoteName);
     (void)StringCchCopyW(pNfs41NetResource->ConnectionName,
-        pNfs41NetResource->ConnectionNameLength,
+        (pNfs41NetResource->ConnectionNameLength/sizeof(WCHAR)),
         ConnectionName);
 
     // TODO: copy mount options -cbodley
@@ -1314,13 +1314,13 @@ NPEnumResource(
                 StringZone = (PWCHAR)( (PBYTE) StringZone - SpaceNeeded);
                 // copy local name
                 (void)StringCchCopyW(StringZone,
-                    pNfsNetResource->LocalNameLength,
+                    (pNfsNetResource->LocalNameLength/sizeof(WCHAR)),
                     pNfsNetResource->LocalName);
                 pNetResource->lpLocalName = StringZone;
                 StringZone += pNfsNetResource->LocalNameLength/sizeof(WCHAR);
                 // copy remote name
                 (void)StringCchCopyW(StringZone,
-                    pNfsNetResource->RemoteNameLength,
+                    (pNfsNetResource->RemoteNameLength/sizeof(WCHAR)),
                     pNfsNetResource->RemoteName);
                 pNetResource->lpRemoteName = StringZone;
                 StringZone += pNfsNetResource->RemoteNameLength/sizeof(WCHAR);
