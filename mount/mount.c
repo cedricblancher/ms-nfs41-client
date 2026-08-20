@@ -1316,7 +1316,7 @@ static DWORD ParseRemoteName(
     result = StringCchCopyW(pConnectionName, cchConnectionLen, L"\\\\");
     if (FAILED(result))
         goto out;
-    result = StringCbCatW(pConnectionName, cchConnectionLen, srvname);
+    result = StringCchCatW(pConnectionName, cchConnectionLen, srvname);
     if (FAILED(result))
         goto out;
     if (*pEnd)
