@@ -322,10 +322,10 @@ static DWORD StoreConnectionInfo(
     pNfs41NetResource = &pSharedMemory->NetResources[i];
 
     pNfs41NetResource->InUse            = TRUE;
-    pNfs41NetResource->dwScope          = 0;
+    pNfs41NetResource->dwScope          = RESOURCE_CONNECTED;
     pNfs41NetResource->dwType           = RESOURCETYPE_DISK;
     pNfs41NetResource->dwDisplayType    = RESOURCEDISPLAYTYPE_SHARE;
-    pNfs41NetResource->dwUsage          = RESOURCEUSAGE_CONNECTABLE;
+    pNfs41NetResource->dwUsage          = 0;
 #ifdef NFS41_DRIVER_USE_AUTHENTICATIONID_FOR_MOUNT_NAMESPACE
     pNfs41NetResource->MountAuthId      = authenticationid;
 #endif /* NFS41_DRIVER_USE_AUTHENTICATIONID_FOR_MOUNT_NAMESPACE */
@@ -1459,10 +1459,10 @@ NPGetResourceParent(
          * |dwUsage| are returned, and describe the output
          * |lpNetResource->lpRemoteName|
          */
-        outNetResource->dwScope = 0;
+        outNetResource->dwScope = RESOURCE_CONNECTED;
         outNetResource->dwType = RESOURCETYPE_ANY;
         outNetResource->dwDisplayType = RESOURCEDISPLAYTYPE_SHARE;
-        outNetResource->dwUsage = RESOURCEUSAGE_CONNECTABLE;
+        outNetResource->dwUsage = 0;
         outNetResource->lpLocalName = NULL;
 
         /*
@@ -1586,10 +1586,10 @@ NPGetResourceInformation(
         Status = WN_SUCCESS;
     }
     else if ((state == 3) || (state == 4)) {
-        outNetResource->dwScope = 0;
+        outNetResource->dwScope = RESOURCE_CONNECTED;
         outNetResource->dwType = RESOURCETYPE_DISK;
         outNetResource->dwDisplayType = RESOURCEDISPLAYTYPE_SHARE;
-        outNetResource->dwUsage = RESOURCEUSAGE_CONNECTABLE;
+        outNetResource->dwUsage = 0;
         outNetResource->lpLocalName = NULL;
 
         if (state == 3) {
