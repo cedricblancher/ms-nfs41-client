@@ -1114,7 +1114,7 @@ NPGetConnection3(
         pNetResource = &pSharedMemory->NetResources[Index];
 
         if (!pNetResource->InUse)
-            break;
+            continue;
 
         if ((((wcslen(lpLocalName)+1)*sizeof(WCHAR)) ==
                 pNetResource->LocalNameLength) &&
