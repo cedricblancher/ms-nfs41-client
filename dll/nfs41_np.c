@@ -1387,7 +1387,8 @@ NPGetResourceParent(
     }
 
     size_t requiredLen = sizeof(NETRESOURCEW) +
-        (wcslen(lpNetResource->lpRemoteName)+1)*sizeof(wchar_t);
+        (wcslen(lpNetResource->lpRemoteName)+1)*sizeof(wchar_t) +
+        sizeof(NFS41_PROVIDER_NAME_U);
     if (*lpBufferSize < requiredLen) {
         *lpBufferSize = (DWORD)requiredLen;
         Status = WN_MORE_DATA;
