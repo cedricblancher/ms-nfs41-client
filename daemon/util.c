@@ -744,6 +744,12 @@ int parse_fs_location_server_address(IN const char *restrict inaddr,
 HANDLE create_nfs41sys_device_pipe(void)
 {
     HANDLE pipe;
+    /*
+     * Handles should be at least per-thread, because |DeviceIoControl()|
+     * has to handle |STATUS_PENDING| with |NtWaitForSingleObject()|
+     * internally, and that does not work with a |HANDLE| shared between
+     * multiple threads
+     */
     pipe = CreateFileA(NFS41_USER_DEVICE_NAME_A,
         GENERIC_READ|GENERIC_WRITE,
         FILE_SHARE_READ|FILE_SHARE_WRITE,

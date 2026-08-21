@@ -126,6 +126,13 @@ static unsigned int nfsd_worker_thread_main(void *args)
         eprintf("Failed set THREAD_PRIORITY_TIME_CRITICAL\n");
     }
 
+    /*
+     * Create per-thread device handles via |create_nfs41sys_device_pipe()| -
+     * Handles should be at least per-thread, because |DeviceIoControl()|
+     * has to handle |STATUS_PENDING| with |NtWaitForSingleObject()|
+     * internally, and that does not work with a |HANDLE| shared between
+     * multiple threads
+     */
     pipe = create_nfs41sys_device_pipe();
     if (pipe == INVALID_HANDLE_VALUE) {
         DWORD lasterr = GetLastError();
