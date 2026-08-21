@@ -103,6 +103,7 @@ static unsigned int nfsd_worker_thread_main(void *args)
 {
     /*nfs41_daemon_globals *nfs41dg = (nfs41_daemon_globals *)args;*/
     DWORD status = 0;
+    BOOL success;
     HANDLE pipe;
     // buffer used to process upcall, assumed to be fixed size.
     // if we ever need to handle non-cached IO, need to make it dynamic
@@ -142,12 +143,14 @@ static unsigned int nfsd_worker_thread_main(void *args)
     }
 
     while(1) {
-        status = DeviceIoControl(pipe, IOCTL_NFS41_READ, NULL, 0,
-            outbuf, UPCALL_BUF_SIZE, (LPDWORD)&outbuf_len, NULL);
-        if (!status) {
+        success = DeviceIoControl(pipe, IOCTL_NFS41_READ,
+            NULL, 0,
+            outbuf, UPCALL_BUF_SIZE,
+            (LPDWORD)&outbuf_len, NULL);
+        if (!success) {
             eprintf("nfsd_worker_thread_main: "
-                "IOCTL_NFS41_READ failed, status=0x%x, lasterr=%d\n",
-                status, (int)GetLastError());
+                "IOCTL_NFS41_READ failed, lasterr=%d\n",
+                (int)GetLastError());
             continue;
         }
 
@@ -203,11 +206,17 @@ write_downcall:
             (long)inbuf_len,
             opcode2string(upcall.opcode),
             upcall.status));
-        status = DeviceIoControl(pipe, IOCTL_NFS41_WRITE,
-            inbuf, inbuf_len, NULL, 0, (LPDWORD)&outbuf_len, NULL);
-        if (!status) {
-            eprintf("IOCTL_NFS41_WRITE failed with %d xid=%lld opcode='%s'\n",
-                GetLastError(), upcall.xid, opcode2string(upcall.opcode));
+        success = DeviceIoControl(pipe, IOCTL_NFS41_WRITE,
+            inbuf, inbuf_len,
+            NULL, 0,
+            (LPDWORD)&outbuf_len, NULL);
+        if (!success) {
+            eprintf("nfsd_worker_thread_main: "
+                "IOCTL_NFS41_WRITE failed with "
+                "lasterr=%d xid=%lld opcode='%s'\n",
+                (int)GetLastError(),
+                upcall.xid,
+                opcode2string(upcall.opcode));
             upcall_cancel(&upcall);
         }
         if (upcall.status != NFSD_VERSION_MISMATCH)
@@ -712,6 +721,7 @@ VOID ServiceStart(DWORD argc, LPWSTR *argv)
 #endif
 {
     DWORD status = 0, len;
+    BOOL success;
     // handle to our drivers
     HANDLE pipe;
     nfs41_process_thread tids[MAX_NUM_THREADS];
@@ -778,11 +788,14 @@ VOID ServiceStart(DWORD argc, LPWSTR *argv)
     }
 
     DPRINTF(1, ("starting nfs41 mini redirector\n"));
-    status = DeviceIoControl(pipe, IOCTL_NFS41_START,
-        &NFS41D_VERSION, sizeof(DWORD), NULL, 0, (LPDWORD)&len, NULL);
-    if (!status) {
-        eprintf("IOCTL_NFS41_START failed with %d\n", 
-                GetLastError());
+    success = DeviceIoControl(pipe, IOCTL_NFS41_START,
+        &NFS41D_VERSION, sizeof(DWORD),
+        NULL, 0,
+        (LPDWORD)&len, NULL);
+    if (!success) {
+        eprintf("ServiceStart: "
+            "IOCTL_NFS41_START failed with lasterr=%d\n",
+            (int)GetLastError());
         goto out_pipe;
     }
 

@@ -280,7 +280,8 @@ static int delegation_return(
         /* make an upcall to the kernel: invalide data cache */
         HANDLE pipe;
         unsigned char inbuf[sizeof(HANDLE)], *buffer = inbuf;
-        DWORD inbuf_len = sizeof(HANDLE), outbuf_len, dstatus;
+        DWORD inbuf_len = sizeof(HANDLE), outbuf_len;
+        BOOL success;
         uint32_t length;
         DPRINTF(1,
             ("delegation_return: making a downcall for srv_open=0x%p\n",
@@ -295,10 +296,15 @@ static int delegation_return(
         length = inbuf_len;
         safe_write(&buffer, &length, &deleg->srv_open, sizeof(HANDLE));
 
-        dstatus = DeviceIoControl(pipe, IOCTL_NFS41_INVALCACHE, inbuf, inbuf_len,
-            NULL, 0, (LPDWORD)&outbuf_len, NULL);
-        if (!dstatus)
-            eprintf("IOCTL_NFS41_INVALCACHE failed %d\n", GetLastError());
+        success = DeviceIoControl(pipe, IOCTL_NFS41_INVALCACHE,
+            inbuf, inbuf_len,
+            NULL, 0,
+            (LPDWORD)&outbuf_len, NULL);
+        if (!success) {
+            eprintf("delegation_return: "
+                "IOCTL_NFS41_INVALCACHE failed, lasterr=%d\n",
+                (int)GetLastError());
+        }
         close_nfs41sys_device_pipe(pipe);
     }
 out_downcall:

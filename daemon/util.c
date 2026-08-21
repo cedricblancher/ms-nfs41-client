@@ -770,7 +770,8 @@ int delayxid(LONGLONG xid, LONGLONG moredelaysecs)
     int status;
     HANDLE pipe;
     unsigned char inbuf[sizeof(LONGLONG)*2], *buffer = inbuf;
-    DWORD inbuf_len = sizeof(LONGLONG)*2, outbuf_len, dstatus;
+    DWORD inbuf_len = sizeof(LONGLONG)*2, outbuf_len;
+    BOOL success;
     uint32_t length;
 
     pipe = create_nfs41sys_device_pipe();
@@ -786,9 +787,11 @@ int delayxid(LONGLONG xid, LONGLONG moredelaysecs)
     safe_write(&buffer, &length, &moredelaysecs, sizeof(moredelaysecs));
     EASSERT(length == 0);
 
-    dstatus = DeviceIoControl(pipe, IOCTL_NFS41_DELAYXID,
-        inbuf, inbuf_len, NULL, 0, &outbuf_len, NULL);
-    if (dstatus) {
+    success = DeviceIoControl(pipe, IOCTL_NFS41_DELAYXID,
+        inbuf, inbuf_len,
+        NULL, 0,
+        &outbuf_len, NULL);
+    if (success) {
         status = ERROR_SUCCESS;
     }
     else {
