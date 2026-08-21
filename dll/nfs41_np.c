@@ -1288,7 +1288,19 @@ NPEnumResource(
 #endif /* NFS41_DRIVER_USE_AUTHENTICATIONID_FOR_MOUNT_NAMESPACE */
                 ) {
             SpaceNeeded  = sizeof(NETRESOURCE);
-            SpaceNeeded += pNfsNetResource->LocalNameLength;
+            /*
+             * local name: Count drive letter (e.g. L"X:\0"), or count
+             * zero bytes for UNC path mounts
+             */
+            if ((pNfsNetResource->LocalNameLength >=
+                sizeof(NFS41NP_LOCALNAME_UNC_MARKER)) &&
+                (memcmp(pNfsNetResource->LocalName, NFS41NP_LOCALNAME_UNC_MARKER,
+                    sizeof(NFS41NP_LOCALNAME_UNC_MARKER)) == 0)) {
+                /* SpaceNeeded += 0; */
+            }
+            else {
+                SpaceNeeded += pNfsNetResource->LocalNameLength;
+            }
             SpaceNeeded += pNfsNetResource->RemoteNameLength;
             // comment
             SpaceNeeded += 5 * sizeof(WCHAR);
@@ -1312,12 +1324,23 @@ NPEnumResource(
                 // setup string area at opposite end of buffer
                 SpaceNeeded -= sizeof(NETRESOURCE);
                 StringZone = (PWCHAR)( (PBYTE) StringZone - SpaceNeeded);
-                // copy local name
-                (void)StringCchCopyW(StringZone,
-                    (pNfsNetResource->LocalNameLength/sizeof(WCHAR)),
-                    pNfsNetResource->LocalName);
-                pNetResource->lpLocalName = StringZone;
-                StringZone += pNfsNetResource->LocalNameLength/sizeof(WCHAR);
+                /*
+                 * local name: Copy drive letter (e.g. L"X:\0"), or return
+                 * |NULL| pointer for UNC path mounts
+                 */
+                if ((pNfsNetResource->LocalNameLength >=
+                    sizeof(NFS41NP_LOCALNAME_UNC_MARKER)) &&
+                    (memcmp(pNfsNetResource->LocalName, NFS41NP_LOCALNAME_UNC_MARKER,
+                        sizeof(NFS41NP_LOCALNAME_UNC_MARKER)) == 0)) {
+                    pNetResource->lpLocalName = NULL;
+                }
+                else {
+                    (void)StringCchCopyW(StringZone,
+                        (pNfsNetResource->LocalNameLength/sizeof(WCHAR)),
+                        pNfsNetResource->LocalName);
+                    pNetResource->lpLocalName = StringZone;
+                    StringZone += pNfsNetResource->LocalNameLength/sizeof(WCHAR);
+                }
                 // copy remote name
                 (void)StringCchCopyW(StringZone,
                     (pNfsNetResource->RemoteNameLength/sizeof(WCHAR)),
