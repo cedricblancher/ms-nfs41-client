@@ -650,9 +650,12 @@ call_again:
 	}
 
 #ifdef NO_CB_4_KRB5P
-    if (cl->cb_thread != INVALID_HANDLE_VALUE)
-        release_fd_lock(ct->ct_fd, mask);
+    if (cl->cb_thread != INVALID_HANDLE_VALUE) {
+#else
+    {
 #endif
+        release_fd_lock(ct->ct_fd, mask);
+    }
 	/*
 	 * Keep receiving until we get a valid transaction id
 	 */
@@ -661,12 +664,14 @@ call_again:
 	while (TRUE) {
 #ifdef NO_CB_4_KRB5P
         if (cl->cb_thread != INVALID_HANDLE_VALUE) {
+#endif
             mutex_lock(&clnt_fd_lock);
 	        while ((vc_fd_locks[ct->ct_fd]) ||
                     (ct->reply_msg.rm_xid && ct->reply_msg.rm_xid != x_id))
 		        cond_wait(&vc_cv[ct->ct_fd], &clnt_fd_lock);
 	        vc_fd_locks[ct->ct_fd] = 1;
 	        mutex_unlock(&clnt_fd_lock);
+#ifdef NO_CB_4_KRB5P
         }
 #endif
         __xdrrec_setnonblock(xdrs, 0);
