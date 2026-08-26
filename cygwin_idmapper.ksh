@@ -557,6 +557,7 @@ function load_idmap_config
 		# default config
 		'default')
 			compound c.idmap_config=(
+				# "localdomain" must be uppercase, "nfsdomain" must be lowercase
 				typeset -r localdomain='GLOBAL.LOC'	# Default domain for Windows
 				typeset -r nfsdomain='global.loc'	# Default domain for NFS server
 
@@ -582,6 +583,7 @@ function load_idmap_config
 		# example configuration for rovema.de
 		'rovema_de_domain_client_to_linux_nfsd')
 			compound c.idmap_config=(
+				# "localdomain" must be uppercase, "nfsdomain" must be lowercase
 				typeset -r localdomain='GLOBAL.LOC'	# Default domain for Windows
 				typeset -r nfsdomain='global.loc'	# Default domain for NFS server
 

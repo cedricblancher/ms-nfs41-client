@@ -13,8 +13,12 @@ apt-get install nfs-kernel-server nfs-common nfs4-acl-tools autofs
 
 # turn idmapper on, even for AUTH_SYS
 {
-        printf "[General]\n"
-        printf "Domain = GLOBAL.LOC\n"
+        printf '[General]\n'
+        printf '# Verbosity = 8 logs all idmapper lookups\n'
+        printf 'Verbosity = 8\n'
+        printf '# Value for "Domain" must be lowercase, value for "Local-Realms" uppercase\n'
+        printf 'Domain = global.loc\n'
+        printf 'Local-Realms = GLOBAL.LOC\n'
 } >>'/etc/idmapd.conf'
 printf "options nfsd nfs4_disable_idmapping=N\noptions nfs nfs4_disable_idmapping=N\n" >>'/etc/modprobe.d/nfs.conf'
 printf "NEED_IDMAPD=yes\n" >>'/etc/default/nfs-common'
