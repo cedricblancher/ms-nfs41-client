@@ -719,7 +719,7 @@ NTSTATUS nfs41_MountConfig_ParseOptions(
             else {
                 status = STATUS_INVALID_PARAMETER;
                 print_error("Invalid createmode '%wZ'\n",
-                    usValue);
+                    &usValue);
             }
 
             DbgP("nfs41_MountConfig_ParseOptions: createmode: "
@@ -751,7 +751,7 @@ NTSTATUS nfs41_MountConfig_ParseOptions(
         else {
             status = STATUS_INVALID_PARAMETER;
             print_error("Unrecognized option '%ls' -> '%wZ'\n",
-                Name, usValue);
+                Name, &usValue);
         }
 
         if (Option->NextEntryOffset == 0)
