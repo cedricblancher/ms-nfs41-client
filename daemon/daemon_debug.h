@@ -1,6 +1,6 @@
 /* NFSv4.1 client for Windows
  * Copyright (C) 2012 The Regents of the University of Michigan
- * Copyright (C) 2023-2025 Roland Mainz <roland.mainz@nrubsig.org>
+ * Copyright (C) 2023-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Olga Kornievskaia <aglo@umich.edu>
  * Casey Bodley <cbodley@umich.edu>
@@ -132,12 +132,12 @@ extern int g_debug_level;
 /* daemon_debug.h */
 void set_debug_level(int level);
 #ifdef _MSC_VER
-void logprintf(_In_z_ _Printf_format_string_ const char *restrict format, ...);
-void dprintf_out(_In_z_ _Printf_format_string_ const char *restrict format,
+__declspec(noinline) void logprintf(_In_z_ _Printf_format_string_ const char *restrict format, ...);
+__declspec(noinline) void dprintf_out(_In_z_ _Printf_format_string_ const char *restrict format,
     ...);
-void eprintf_out(_In_z_ _Printf_format_string_ const char *restrict format,
+__declspec(noinline) void eprintf_out(_In_z_ _Printf_format_string_ const char *restrict format,
     ...);
-void eprintf(_In_z_ _Printf_format_string_ const char *restrict format, ...);
+__declspec(noinline) void eprintf(_In_z_ _Printf_format_string_ const char *restrict format, ...);
 #else
 void logprintf(const char *restrict format, ...);
 void dprintf_out(const char *restrict format, ...);

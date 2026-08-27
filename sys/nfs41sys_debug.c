@@ -64,6 +64,7 @@
 //#define INCLUDE_TIMESTAMPS
 
 #ifdef _MSC_VER
+__declspec(noinline)
 ULONG DbgP(_In_z_ _Printf_format_string_ const char *restrict fmt, ...)
 #else
 ULONG DbgP(const char *restrict fmt, ...)
@@ -106,6 +107,7 @@ ULONG DbgP(const char *restrict fmt, ...)
 }
 
 #ifdef _MSC_VER
+__declspec(noinline)
 ULONG print_error(_In_z_ _Printf_format_string_ const char *restrict fmt, ...)
 #else
 ULONG print_error(const char *restrict fmt, ...)

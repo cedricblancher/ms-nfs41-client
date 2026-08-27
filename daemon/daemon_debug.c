@@ -99,6 +99,7 @@ void open_log_files()
 #define DPRINTF_PRINT_IMPERSONATION_USER 1
 
 #ifdef _MSC_VER
+__declspec(noinline)
 void dprintf_out(_In_z_ _Printf_format_string_ const char *restrict format, ...)
 #else
 void dprintf_out(const char *restrict format, ...)
@@ -165,6 +166,7 @@ void dprintf_out(const char *restrict format, ...)
 
 /* log events (mount, umount, auth, ...) */
 #ifdef _MSC_VER
+__declspec(noinline)
 void logprintf(_In_z_ _Printf_format_string_ const char *restrict format, ...)
 #else
 void logprintf(const char *restrict format, ...)
@@ -223,6 +225,7 @@ void logprintf(const char *restrict format, ...)
 }
 
 #ifdef _MSC_VER
+__declspec(noinline)
 void eprintf_out(_In_z_ _Printf_format_string_ const char *restrict format, ...)
 #else
 void eprintf_out(const char *restrict format, ...)
@@ -236,6 +239,7 @@ void eprintf_out(const char *restrict format, ...)
 }
 
 #ifdef _MSC_VER
+__declspec(noinline)
 void eprintf(_In_z_ _Printf_format_string_ const char *restrict format, ...)
 #else
 void eprintf(const char *restrict format, ...)
