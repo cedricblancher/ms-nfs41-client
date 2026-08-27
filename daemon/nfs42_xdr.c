@@ -242,6 +242,7 @@ static bool_t decode_read_plus_res_ok(
     nfs42_read_plus_res_ok *res)
 {
     nfs42_read_plus_content *contents = NULL;
+    size_t contents_size;
     uint64_t read_data_len = 0ULL;
 
     if (!xdr_bool(xdr, &res->eof)) {
@@ -263,7 +264,29 @@ static bool_t decode_read_plus_res_ok(
         return TRUE;
     }
 
-    contents = _alloca(res->count * sizeof(nfs42_read_plus_content));
+/*
+ * |NFS42_READ_PLUS_CONTENT_MAX_STACKSIZE| - clamp stack usage to 512k
+ *
+ * Assuming:
+ * - MIN_HOLE/block size of 4096 bytes
+ * - sizeof(nfs42_read_plus_content)==16 bytes
+ * it would be enough for
+ * (((clamp_in_kb*1024) / sizeof(nfs42_read_plus_content)) * blocksize) == 128MB
+ * of an alternating sequence of { hole, block } READ_PLUS array data
+ * to hit this limit.
+ *
+ */
+#define NFS42_READ_PLUS_CONTENT_MAX_STACKSIZE (512*1024L)
+    contents_size = res->count * sizeof(nfs42_read_plus_content);
+    if (contents_size > NFS42_READ_PLUS_CONTENT_MAX_STACKSIZE) {
+        eprintf("decode_read_plus_res_ok: "
+            "nfs42_read_plus_content array size %ld > %ld\n",
+            (long)contents_size,
+            NFS42_READ_PLUS_CONTENT_MAX_STACKSIZE);
+        return FALSE;
+    }
+
+    contents = _alloca(contents_size);
 
     uint32_t i, co;
 
