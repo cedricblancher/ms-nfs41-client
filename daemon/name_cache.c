@@ -536,14 +536,13 @@ struct name_cache_entry {
 #define NAME_ENTRY_SIZE sizeof(struct name_cache_entry)
 
 /*
- * FIXME: We use a thread-local variable |name_cmp| here because we do not know
- * an (easy) way to do a |RB_GENERATE()| with two diffrent name comparisation
- * functions (|name_cmp_case_sensitive()| and |name_cmp_case_insensitive()|)
+ * Generate separate RB tree implementations for { case-sensitive,
+ * case-insensitive } modes
  */
-__declspec(thread) static
-int (*name_cmp)(struct name_cache_entry *, struct name_cache_entry *) = NULL;
-
-RB_GENERATE(name_tree, name_cache_entry, rbnode, name_cmp)
+RB_HEAD(name_tree_cs, name_cache_entry);
+#ifdef NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT
+RB_HEAD(name_tree_ci, name_cache_entry);
+#endif /* NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT */
 
 struct nfs41_name_cache {
     struct name_cache_entry *root;
@@ -656,23 +655,58 @@ int name_cmp_case_insensitive(
 #endif /* NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT */
 
 
+RB_GENERATE(name_tree_cs, name_cache_entry, rbnode, name_cmp_case_sensitive)
 #ifdef NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT
-#define NC_SET_NAMECMP(ciss) \
-    { name_cmp = (ciss)?name_cmp_case_insensitive:name_cmp_case_sensitive; }
-#define NC_CLEAR_NAMECMP() \
-    { \
-        name_cmp = \
-            (int (*)(struct name_cache_entry *, struct name_cache_entry *))NULL; \
-    }
-#else
-#define NC_SET_NAMECMP(ciss) \
-    { EASSERT((ciss) == false) ; name_cmp = name_cmp_case_sensitive; }
-#define NC_CLEAR_NAMECMP() \
-    { \
-        name_cmp = \
-            (int (*)(struct name_cache_entry *, struct name_cache_entry *))NULL; \
-    }
+RB_GENERATE(name_tree_ci, name_cache_entry, rbnode, name_cmp_case_insensitive)
 #endif /* NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT */
+
+static __inline struct name_cache_entry *name_tree_find(
+    IN struct name_tree *head,
+    IN struct name_cache_entry *entry,
+    IN bool caseinsensitivesearch)
+{
+#ifdef NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT
+    if (caseinsensitivesearch) {
+        return RB_FIND(name_tree_ci, (struct name_tree_ci *)head, entry);
+    }
+    else {
+#else
+    {
+        EASSERT(caseinsensitivesearch == false);
+#endif /* NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT */
+
+#ifdef DEBUG_CASESENSITIVE_ACCESSES_ON_CASEINSENSITIVE_FS
+        EASSERT_MSG(false, ("name_tree_find: error case-sensitive, name='%.*s'\n",
+            (int)entry->component_len, entry->component));
+#endif /* DEBUG_CASESENSITIVE_ACCESSES_ON_CASEINSENSITIVE_FS */
+
+        return RB_FIND(name_tree_cs, (struct name_tree_cs *)head, entry);
+    }
+}
+
+static __inline struct name_cache_entry *name_tree_insert(
+    IN struct name_tree *head,
+    IN struct name_cache_entry *entry,
+    IN bool caseinsensitivesearch)
+{
+#ifdef NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT
+    if (caseinsensitivesearch) {
+        return RB_INSERT(name_tree_ci, (struct name_tree_ci *)head, entry);
+    }
+    else {
+#else
+    {
+        EASSERT(caseinsensitivesearch == false);
+#endif /* NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT */
+
+#ifdef DEBUG_CASESENSITIVE_ACCESSES_ON_CASEINSENSITIVE_FS
+        EASSERT_MSG(false, ("name_tree_insert: error case-sensitive, name='%.*s'\n",
+            (int)entry->component_len, entry->component));
+#endif /* DEBUG_CASESENSITIVE_ACCESSES_ON_CASEINSENSITIVE_FS */
+
+        return RB_INSERT(name_tree_cs, (struct name_tree_cs *)head, entry);
+    }
+}
 
 
 
@@ -700,7 +734,7 @@ static __inline void name_cache_remove(
     IN struct name_cache_entry *entry,
     IN struct name_cache_entry *parent)
 {
-    RB_REMOVE(name_tree, &parent->rbchildren, entry);
+    RB_REMOVE(name_tree_cs, (struct name_tree_cs *)&parent->rbchildren, entry);
     entry->parent = NULL;
 }
 
@@ -735,7 +769,8 @@ static void name_cache_unlink_children_recursive(
     IN struct name_cache_entry *parent)
 {
     struct name_cache_entry *entry, *tmp;
-    RB_FOREACH_SAFE(entry, name_tree, &parent->rbchildren, tmp)
+    RB_FOREACH_SAFE(entry, name_tree_cs,
+        (struct name_tree_cs *)&parent->rbchildren, tmp)
         name_cache_unlink(cache, entry);
 }
 
@@ -887,7 +922,8 @@ static void name_cache_entry_invalidate(
 static struct name_cache_entry* name_cache_search(
     IN struct nfs41_name_cache *cache,
     IN struct name_cache_entry *parent,
-    IN const nfs41_component *component)
+    IN const nfs41_component *component,
+    IN bool caseinsensitivesearch)
 {
     struct name_cache_entry tmp, *entry;
 
@@ -899,7 +935,7 @@ static struct name_cache_entry* name_cache_search(
     tmp.component_len = component->len;
     tmp.name_cache = cache;
 
-    entry = RB_FIND(name_tree, &parent->rbchildren, &tmp);
+    entry = name_tree_find(&parent->rbchildren, &tmp, caseinsensitivesearch);
     if (entry) {
         DPRINTF(NCLVL2, ("<-- name_cache_search() "
             "found existing entry 0x%p\n", entry));
@@ -936,6 +972,7 @@ static int entry_invis(
 
 static int name_cache_lookup(
     IN struct nfs41_name_cache *cache,
+    IN bool caseinsensitivesearch,
     IN bool skip_invis,
     IN const char *path,
     IN const char *path_end,
@@ -963,7 +1000,7 @@ static int name_cache_lookup(
 
     while (next_component(path_pos, path_end, &component)) {
         parent = target;
-        target = name_cache_search(cache, parent, &component);
+        target = name_cache_search(cache, parent, &component, caseinsensitivesearch);
         path_pos = component.name + component.len;
         if (target == NULL || (skip_invis && entry_invis(target, is_negative))) {
             target = NULL;
@@ -984,13 +1021,14 @@ out:
 
 static int name_cache_insert(
     IN struct name_cache_entry *entry,
-    IN struct name_cache_entry *parent)
+    IN struct name_cache_entry *parent,
+    IN bool caseinsensitivesearch)
 {
     int status = NO_ERROR;
 
     DPRINTF(NCLVL2, ("--> name_cache_insert('%s')\n", entry->component));
 
-    if (RB_INSERT(name_tree, &parent->rbchildren, entry))
+    if (name_tree_insert(&parent->rbchildren, entry, caseinsensitivesearch))
         status = ERROR_FILE_EXISTS;
     entry->parent = parent;
 
@@ -1002,6 +1040,7 @@ static int name_cache_find_or_create(
     IN struct nfs41_name_cache *cache,
     IN struct name_cache_entry *parent,
     IN const nfs41_component *component,
+    IN bool caseinsensitivesearch,
     OUT struct name_cache_entry **target_out)
 {
     int status = NO_ERROR;
@@ -1009,7 +1048,7 @@ static int name_cache_find_or_create(
     DPRINTF(NCLVL1, ("--> name_cache_find_or_create('%.*s' under '%s')\n",
         component->len, component->name, parent->component));
 
-    *target_out = name_cache_search(cache, parent, component);
+    *target_out = name_cache_search(cache, parent, component, caseinsensitivesearch);
     if (*target_out)
         goto out;
 
@@ -1017,7 +1056,7 @@ static int name_cache_find_or_create(
     if (status)
         goto out;
 
-    status = name_cache_insert(*target_out, parent);
+    status = name_cache_insert(*target_out, parent, caseinsensitivesearch);
     if (status)
         goto out_err;
 
@@ -1160,8 +1199,6 @@ int nfs41_name_cache_lookup(
     const char *path_pos = path;
     int status;
 
-    NC_SET_NAMECMP(caseinsensitivesearch);
-
     AcquireSRWLockShared(&cache->lock);
 
     if (!name_cache_enabled(cache)) {
@@ -1169,7 +1206,7 @@ int nfs41_name_cache_lookup(
         goto out_unlock;
     }
 
-    status = name_cache_lookup(cache, 1, path, path_end,
+    status = name_cache_lookup(cache, caseinsensitivesearch, 1, path, path_end,
         &path_pos, &parent, &target, is_negative);
 
     if (parent_out) copy_fh(parent_out, parent);
@@ -1179,7 +1216,6 @@ int nfs41_name_cache_lookup(
 
 out_unlock:
     ReleaseSRWLockShared(&cache->lock);
-    NC_CLEAR_NAMECMP();
     if (remaining_path_out) *remaining_path_out = path_pos;
     return status;
 }
@@ -1195,7 +1231,6 @@ int nfs41_attr_cache_lookup(
     DPRINTF(NCLVL1, ("--> nfs41_attr_cache_lookup(%llu)\n", fileid));
 
     /* No name argument, so no lookups by name */
-    NC_CLEAR_NAMECMP();
 
     AcquireSRWLockShared(&cache->lock);
 
@@ -1230,7 +1265,6 @@ int nfs41_attr_cache_update(
     DPRINTF(NCLVL1, ("--> nfs41_attr_cache_update(%llu)\n", fileid));
 
     /* No name argument, so no lookups by name */
-    NC_CLEAR_NAMECMP();
 
     AcquireSRWLockExclusive(&cache->lock);
 
@@ -1270,8 +1304,6 @@ int nfs41_name_cache_insert(
     DPRINTF(NCLVL1, ("--> nfs41_name_cache_insert('%.*s')\n",
         (unsigned int)(name->name + name->len - path), path));
 
-    NC_SET_NAMECMP(caseinsensitivesearch);
-
     AcquireSRWLockExclusive(&cache->lock);
 
     if (!name_cache_enabled(cache)) {
@@ -1298,7 +1330,7 @@ int nfs41_name_cache_insert(
         target = cache->root;
     } else {
         /* find/create an entry under its parent */
-        status = name_cache_lookup(cache, 0, path,
+        status = name_cache_lookup(cache, caseinsensitivesearch, 0, path,
             name->name, NULL, NULL, &parent, NULL);
         if (status)
             goto out_err_deleg;
@@ -1308,7 +1340,7 @@ int nfs41_name_cache_insert(
             goto out_err_deleg;
         }
 
-        status = name_cache_find_or_create(cache, parent, name, &target);
+        status = name_cache_find_or_create(cache, parent, name, caseinsensitivesearch, &target);
         if (status)
             goto out_err_deleg;
     }
@@ -1320,7 +1352,6 @@ int nfs41_name_cache_insert(
 
 out_unlock:
     ReleaseSRWLockExclusive(&cache->lock);
-    NC_CLEAR_NAMECMP();
 
     DPRINTF(NCLVL1, ("<-- nfs41_name_cache_insert() returning %d\n",
         status));
@@ -1361,8 +1392,6 @@ int nfs41_name_cache_delegreturn(
     DPRINTF(NCLVL1, ("--> nfs41_name_cache_delegreturn(%llu, '%s')\n",
         fileid, path));
 
-    NC_SET_NAMECMP(caseinsensitivesearch);
-
     AcquireSRWLockExclusive(&cache->lock);
 
     if (!name_cache_enabled(cache)) {
@@ -1370,7 +1399,7 @@ int nfs41_name_cache_delegreturn(
         goto out_unlock;
     }
 
-    status = name_cache_lookup(cache, 0, path,
+    status = name_cache_lookup(cache, caseinsensitivesearch, 0, path,
         name->name + name->len, NULL, &parent, &target, NULL);
     if (status == NO_ERROR) {
         /* put the name cache entry back on the exp_entries list */
@@ -1399,7 +1428,6 @@ int nfs41_name_cache_delegreturn(
 
 out_unlock:
     ReleaseSRWLockExclusive(&cache->lock);
-    NC_CLEAR_NAMECMP();
 
     DPRINTF(NCLVL1, ("<-- nfs41_name_cache_delegreturn() returning %d\n", status));
     return status;
@@ -1419,8 +1447,6 @@ int nfs41_name_cache_remove(
 
     DPRINTF(NCLVL1, ("--> nfs41_name_cache_remove('%s')\n", path));
 
-    NC_SET_NAMECMP(caseinsensitivesearch);
-
     AcquireSRWLockExclusive(&cache->lock);
 
     if (!name_cache_enabled(cache)) {
@@ -1428,7 +1454,7 @@ int nfs41_name_cache_remove(
         goto out_unlock;
     }
 
-    status = name_cache_lookup(cache, 0, path,
+    status = name_cache_lookup(cache, caseinsensitivesearch, 0, path,
         name->name + name->len, NULL, &parent, &target, NULL);
     if (status == ERROR_PATH_NOT_FOUND)
         goto out_attributes;
@@ -1450,7 +1476,6 @@ int nfs41_name_cache_remove(
 
 out_unlock:
     ReleaseSRWLockExclusive(&cache->lock);
-    NC_CLEAR_NAMECMP();
 
     DPRINTF(NCLVL1, ("<-- nfs41_name_cache_remove() returning %d\n", status));
     return status;
@@ -1482,8 +1507,6 @@ int nfs41_name_cache_rename(
     DPRINTF(NCLVL1, ("--> nfs41_name_cache_rename('%s' to '%s')\n",
         src_path, dst_path));
 
-    NC_SET_NAMECMP(caseinsensitivesearch);
-
     AcquireSRWLockExclusive(&cache->lock);
 
     if (!name_cache_enabled(cache)) {
@@ -1492,14 +1515,14 @@ int nfs41_name_cache_rename(
     }
 
     /* look up dst_parent */
-    status = name_cache_lookup(cache, 0, dst_path,
+    status = name_cache_lookup(cache, caseinsensitivesearch, 0, dst_path,
         dst_name->name, NULL, NULL, &dst_parent, NULL);
     /* we can't create the dst entry without a parent */
     if (status || dst_parent->attributes == NULL) {
         /* if src exists, make it negative */
         DPRINTF(NCLVL1, ("nfs41_name_cache_rename: adding negative cache "
             "entry for '%.*s'\n", src_name->len, src_name->name));
-        status = name_cache_lookup(cache, 0, src_path,
+        status = name_cache_lookup(cache, caseinsensitivesearch, 0, src_path,
             src_name->name + src_name->len, NULL, NULL, &src, NULL);
         if (status == NO_ERROR) {
             name_cache_entry_update(cache, src, NULL, NULL, OPEN_DELEGATE_NONE);
@@ -1510,7 +1533,7 @@ int nfs41_name_cache_rename(
     }
 
     /* look up src_parent and src */
-    status = name_cache_lookup(cache, 0, src_path,
+    status = name_cache_lookup(cache, caseinsensitivesearch, 0, src_path,
         src_name->name + src_name->len, NULL, &src_parent, &src, NULL);
     /* we can't create the dst entry without valid attributes */
     if (status || src->attributes == NULL) {
@@ -1518,7 +1541,7 @@ int nfs41_name_cache_rename(
         struct name_cache_entry *dst;
         DPRINTF(NCLVL1, ("nfs41_name_cache_rename: removing negative cache "
             "entry for '%.*s'\n", dst_name->len, dst_name->name));
-        dst = name_cache_search(cache, dst_parent, dst_name);
+        dst = name_cache_search(cache, dst_parent, dst_name, caseinsensitivesearch);
         if (dst) name_cache_unlink(cache, dst);
         goto out_unlock;
     }
@@ -1531,7 +1554,7 @@ int nfs41_name_cache_rename(
             goto out_unlock;
     } else {
         struct name_cache_entry *existing;
-        existing = name_cache_search(cache, dst_parent, dst_name);
+        existing = name_cache_search(cache, dst_parent, dst_name, caseinsensitivesearch);
         if (existing) {
             if (existing == src)
                 goto out_unlock;
@@ -1543,12 +1566,12 @@ int nfs41_name_cache_rename(
         /* move the src entry under dst_parent */
         name_cache_remove(src, src_parent);
         name_cache_entry_rename(src, dst_name);
-        name_cache_insert(src, dst_parent);
+        name_cache_insert(src, dst_parent, caseinsensitivesearch);
 
         if (existing) {
             /* recycle 'existing' as the negative entry 'src' */
             name_cache_entry_rename(existing, src_name);
-            name_cache_insert(existing, src_parent);
+            name_cache_insert(existing, src_parent, caseinsensitivesearch);
         }
         src = existing;
     }
@@ -1561,7 +1584,7 @@ int nfs41_name_cache_rename(
     /* leave a negative entry where the file used to be */
     if (src == NULL) {
         /* src was moved, create a new entry in its place */
-        status = name_cache_find_or_create(cache, src_parent, src_name, &src);
+        status = name_cache_find_or_create(cache, src_parent, src_name, caseinsensitivesearch, &src);
         if (status)
             goto out_unlock;
     }
@@ -1570,7 +1593,6 @@ int nfs41_name_cache_rename(
 
 out_unlock:
     ReleaseSRWLockExclusive(&cache->lock);
-    NC_CLEAR_NAMECMP();
 
     DPRINTF(NCLVL1, ("<-- nfs41_name_cache_rename() returning %d\n", status));
     return status;
@@ -1597,6 +1619,7 @@ out_unlock:
 
 static bool get_path_fhs(
     IN struct nfs41_name_cache *cache,
+    IN bool caseinsensitivesearch,
     IN nfs41_abs_path *path,
     IN OUT const char **path_pos,
     IN uint32_t max_components,
@@ -1614,7 +1637,7 @@ static bool get_path_fhs(
     AcquireSRWLockShared(&cache->lock);
 
     /* look up the parent of the first component */
-    status = name_cache_lookup(cache, 1, path->path,
+    status = name_cache_lookup(cache, caseinsensitivesearch, 1, path->path,
         *path_pos, NULL, NULL, &target, NULL);
     if (status)
         goto out_unlock;
@@ -1627,7 +1650,7 @@ static bool get_path_fhs(
             break;
         *path_pos = name->name + name->len;
 
-        target = name_cache_search(cache, target, name);
+        target = name_cache_search(cache, target, name, caseinsensitivesearch);
         if (target == NULL || entry_invis(target, NULL)) {
             if (is_last_component(name->name, path_end))
                 status = ERROR_FILE_NOT_FOUND;
@@ -1692,6 +1715,7 @@ out:
 
 static int delete_stale_component(
     IN struct nfs41_name_cache *cache,
+    IN bool caseinsensitivesearch,
     IN nfs41_session *session,
     IN const nfs41_abs_path *path,
     IN const nfs41_component *component)
@@ -1704,7 +1728,7 @@ static int delete_stale_component(
 
     AcquireSRWLockExclusive(&cache->lock);
 
-    status = name_cache_lookup(cache, 0, path->path,
+    status = name_cache_lookup(cache, caseinsensitivesearch, 0, path->path,
         component->name + component->len, NULL, NULL, &target, NULL);
     if (status == NO_ERROR)
         name_cache_unlink(cache, target);
@@ -1735,8 +1759,6 @@ int nfs41_name_cache_remove_stale(
     uint32_t count, index;
     int status = NO_ERROR;
 
-    NC_SET_NAMECMP(caseinsensitivesearch);
-
     AcquireSRWLockShared(&cache->lock);
 
     /* if there's no cache, don't check any components */
@@ -1748,11 +1770,12 @@ int nfs41_name_cache_remove_stale(
     /* hold a lock on the path to protect against rename */
     AcquireSRWLockShared(&path->lock);
 
-    while (get_path_fhs(cache, path, &path_pos, max_components, files, &count)) {
+    while (get_path_fhs(cache, caseinsensitivesearch, path, &path_pos,
+        max_components, files, &count)) {
         status = rpc_array_putfh(session, files, count, &index);
 
         if (status == NFS4ERR_STALE || status == NFS4ERR_FHEXPIRED) {
-            status = delete_stale_component(cache,
+            status = delete_stale_component(cache, caseinsensitivesearch,
                 session, path, &files[index].name);
             break;
         }
@@ -1763,7 +1786,6 @@ int nfs41_name_cache_remove_stale(
     }
 
     ReleaseSRWLockShared(&path->lock);
-    NC_CLEAR_NAMECMP();
 
     return status;
 }
