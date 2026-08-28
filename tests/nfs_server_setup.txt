@@ -259,7 +259,7 @@ printf '/nfsdata -network=10.49.202.0 -mask=255.255.255.0  -sec=sys\n' >>'/etc/e
 service nfsd start
 
 #
-# OPTIONAL: FreeBSD >= 16.0 case-insensitive filesystem setup
+# OPTIONAL 1: FreeBSD >= 16.0 case-insensitive filesystem with sparse file storage setup
 #
 mkdir -p /data
 truncate -s 32G /data/zfs_casei001.img
@@ -270,6 +270,15 @@ mkdir /test_casei001_pool/casei_tests
 chmod a+rwxt /test_casei001_pool/casei_tests
 service nfsd restart
 
+#
+# OPTIONAL 2: FreeBSD >= 16.0 case-insensitive filesystem with zpool storage setup
+#
+zfs create  -o mountpoint=/zroot_casei_pool001  -o xattr=dir  -o casesensitivity=insensitive -o utf8only=on "zroot/casei_pool001"
+zfs get xattr,casesensitivity zroot/casei_pool001 # verify: Must be "casesensitivity=insensitive,xattr=dir"
+printf '/zroot_casei_pool001 -network=10.49.202.0 -mask=255.255.255.0  -sec=sys\n' >>/etc/exports
+mkdir /zroot_casei_pool001/casei_tests
+chmod a+rwxt /zroot_casei_pool001/casei_tests
+service nfsd restart
 
 ##### 2. FreeBSD-specific ms-nfs41-client setup:
 - Normal setup
