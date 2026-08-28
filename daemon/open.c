@@ -923,7 +923,7 @@ static int handle_open(void *daemon_context, nfs41_upcall *upcall)
                 args->path, (int)args->is_caseinsensitive_volume);
             /* fall-through */
         case TRISTATE_BOOL_NOT_SET:
-            /* We default to case-sensitive mode */
+            /* FIXME: We default to case-sensitive mode */
             is_caseinsensitive_volume = false;
             break;
     }
