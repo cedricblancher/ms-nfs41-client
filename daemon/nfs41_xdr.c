@@ -3969,7 +3969,7 @@ static const op_table_entry g_op_table[] = {
 };
 static const uint32_t g_op_table_size = ARRAYSIZE(g_op_table);
 
-static const op_table_entry* op_table_find(uint32_t op)
+static const op_table_entry* op_table_lookup(uint32_t op)
 {
     return op >= g_op_table_size ? NULL : &g_op_table[op];
 }
@@ -4000,7 +4000,7 @@ bool_t nfs_encode_compound(
 
     for (i = 0; i < args->argarray_count; i++)
     {
-        entry = op_table_find(args->argarray[i].op);
+        entry = op_table_lookup(args->argarray[i].op);
         if (entry == NULL || entry->encode == NULL)
             return FALSE;
 
@@ -4060,7 +4060,7 @@ bool_t nfs_decode_compound(
             return FALSE;
         }
 
-        entry = op_table_find(res->resarray[i].op);
+        entry = op_table_lookup(res->resarray[i].op);
         if (entry == NULL || entry->decode == NULL)
             return FALSE;
         if (!entry->decode(xdr, &args->argarray[i], &res->resarray[i]))
