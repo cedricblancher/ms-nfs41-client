@@ -387,11 +387,15 @@ int nfs41_send_compound(
     uint32_t version;
 
  try_again:
+    struct nfsencodedecodecontext nedc = {
+        .args = (void *)inbuf,
+        .res  = (void *)outbuf
+    };
     AcquireSRWLockShared(&rpc->lock);
     version = rpc->version;
     rpc_status = clnt_call(rpc->rpc, 1,
-                           (xdrproc_t)nfs_encode_compound, inbuf,
-                           (xdrproc_t)nfs_decode_compound, outbuf,
+                           (xdrproc_t)nfs_encode_compound, &nedc,
+                           (xdrproc_t)nfs_decode_compound, &nedc,
                            timeout);
     ReleaseSRWLockShared(&rpc->lock);
 

@@ -1,5 +1,5 @@
 /* NFSv4.1 client for Windows
- * Copyright (C) 2024-2025 Roland Mainz <roland.mainz@nrubsig.org>
+ * Copyright (C) 2024-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Roland Mainz <roland.mainz@nrubsig.org>
  *
@@ -64,6 +64,7 @@ bool_t encode_op_allocate(
 
 bool_t decode_op_allocate(
     XDR *xdr,
+    const nfs_argop4 *argop,
     nfs_resop4 *resop)
 {
     nfs42_allocate_res *res = (nfs42_allocate_res *)resop->res;
@@ -154,6 +155,7 @@ static bool_t decode_copy_requirements(
 
 bool_t decode_op_copy(
     XDR *xdr,
+    const nfs_argop4 *argop,
     nfs_resop4 *resop)
 {
     nfs42_copy_res *res = (nfs42_copy_res *)resop->res;
@@ -202,6 +204,7 @@ bool_t encode_op_deallocate(
 
 bool_t decode_op_deallocate(
     XDR *xdr,
+    const nfs_argop4 *argop,
     nfs_resop4 *resop)
 {
     nfs42_deallocate_res *res = (nfs42_deallocate_res *)resop->res;
@@ -383,6 +386,7 @@ static bool_t decode_read_plus_res_ok(
 
 bool_t decode_op_read_plus(
     XDR *xdr,
+    const nfs_argop4 *argop,
     nfs_resop4 *resop)
 {
     nfs42_read_plus_res *res = (nfs42_read_plus_res *)resop->res;
@@ -441,6 +445,7 @@ static bool_t decode_seek_res_ok(
 
 bool_t decode_op_seek(
     XDR *xdr,
+    const nfs_argop4 *argop,
     nfs_resop4 *resop)
 {
     nfs42_seek_res *res = (nfs42_seek_res *)resop->res;
@@ -486,6 +491,7 @@ bool_t encode_op_clone(
 
 bool_t decode_op_clone(
     XDR *xdr,
+    const nfs_argop4 *argop,
     nfs_resop4 *resop)
 {
     nfs42_clone_res *res = (nfs42_clone_res *)resop->res;

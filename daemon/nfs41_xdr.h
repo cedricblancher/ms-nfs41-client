@@ -1,6 +1,6 @@
 /* NFSv4.1 client for Windows
  * Copyright (C) 2012 The Regents of the University of Michigan
- * Copyright (C) 2024-2025 Roland Mainz <roland.mainz@nrubsig.org>
+ * Copyright (C) 2024-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Olga Kornievskaia <aglo@umich.edu>
  * Casey Bodley <cbodley@umich.edu>
@@ -27,6 +27,11 @@
 #include "nfs41_types.h"
 #include "nfs41_compound.h"
 
+struct nfsencodedecodecontext {
+    nfs41_compound_args *args;
+    nfs41_compound_res  *res;
+};
+
 bool_t nfs_encode_compound(XDR *xdr, caddr_t *args);
 bool_t nfs_decode_compound(XDR *xdr, caddr_t *res);
 
@@ -42,16 +47,16 @@ bool_t xdr_state_owner4(XDR *xdr, state_owner4 *so);
 
 /* NFSv4.2 ops */
 bool_t encode_op_allocate(XDR *xdr, nfs_argop4 *argop);
-bool_t decode_op_allocate(XDR *xdr, nfs_resop4 *resop);
+bool_t decode_op_allocate(XDR *xdr, const nfs_argop4 *argop, nfs_resop4 *resop);
 bool_t encode_op_copy(XDR *xdr, nfs_argop4 *argop);
-bool_t decode_op_copy(XDR *xdr, nfs_resop4 *resop);
+bool_t decode_op_copy(XDR *xdr, const nfs_argop4 *argop, nfs_resop4 *resop);
 bool_t encode_op_deallocate(XDR *xdr, nfs_argop4 *argop);
-bool_t decode_op_deallocate(XDR *xdr, nfs_resop4 *resop);
+bool_t decode_op_deallocate(XDR *xdr, const nfs_argop4 *argop, nfs_resop4 *resop);
 bool_t encode_op_read_plus(XDR *xdr, nfs_argop4 *argop);
-bool_t decode_op_read_plus(XDR *xdr, nfs_resop4 *resop);
+bool_t decode_op_read_plus(XDR *xdr, const nfs_argop4 *argop, nfs_resop4 *resop);
 bool_t encode_op_seek(XDR *xdr, nfs_argop4 *argop);
-bool_t decode_op_seek(XDR *xdr, nfs_resop4 *resop);
+bool_t decode_op_seek(XDR *xdr, const nfs_argop4 *argop, nfs_resop4 *resop);
 bool_t encode_op_clone(XDR *xdr, nfs_argop4 *argop);
-bool_t decode_op_clone(XDR *xdr, nfs_resop4 *resop);
+bool_t decode_op_clone(XDR *xdr, const nfs_argop4 *argop, nfs_resop4 *resop);
 
 #endif /* !__NFS41_NFS_XDR_H__ */
