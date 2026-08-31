@@ -3969,7 +3969,8 @@ static const op_table_entry g_op_table[] = {
 };
 static const uint32_t g_op_table_size = ARRAYSIZE(g_op_table);
 
-static const op_table_entry* op_table_lookup(uint32_t op)
+static __forceinline
+const op_table_entry* op_table_lookup(uint32_t op)
 {
     return op >= g_op_table_size ? NULL : &g_op_table[op];
 }
