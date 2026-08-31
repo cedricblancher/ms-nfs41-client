@@ -242,8 +242,10 @@ bool_t encode_op_read_plus(
 
 static bool_t decode_read_plus_res_ok(
     XDR *xdr,
+    const nfs_argop4 *argop,
     nfs42_read_plus_res_ok *res)
 {
+    const nfs42_read_plus_args *args = (const nfs42_read_plus_args *)argop->arg;
     nfs42_read_plus_content *contents = NULL;
     size_t contents_size;
     uint64_t read_data_len = 0ULL;
@@ -318,7 +320,7 @@ static bool_t decode_read_plus_res_ok(
                 }
 
                 contents[i].u.data.data = res->data +
-                    (contents[i].u.data.offset - res->args_offset);
+                    (contents[i].u.data.offset - args->offset);
                 contents[i].u.data.data_len = contents[i].u.data.count;
 
                 EASSERT(((contents[i].u.data.data - res->data) +
@@ -349,7 +351,7 @@ static bool_t decode_read_plus_res_ok(
 
 
                 hole_buff = res->data +
-                    (contents[i].u.hole.offset - res->args_offset);
+                    (contents[i].u.hole.offset - args->offset);
                 hole_length = contents[i].u.hole.length;
 
                 /*
@@ -398,7 +400,7 @@ bool_t decode_op_read_plus(
         return FALSE;
 
     if (res->status == NFS4_OK)
-        return decode_read_plus_res_ok(xdr, &res->resok4);
+        return decode_read_plus_res_ok(xdr, argop, &res->resok4);
 
     return TRUE;
 }
