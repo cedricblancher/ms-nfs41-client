@@ -869,16 +869,16 @@ void print_rpc_gss_sec(struct rpc_sspi_sec *ptr)
 					first = -1;
 					second = -1;
 				}
-				fprintf(fd_out, " %u %u", first, second);
+				fprintf(fd_out, " %u %u", (unsigned int)first, (unsigned int)second);
 				p++;
 			}
 			else {
-				fprintf(fd_out, " %u", (unsigned char)*p++);
+				fprintf(fd_out, " %u", (unsigned int)*p++);
 			}
 		fprintf(fd_out, " }\n");
 	}
-	fprintf(fd_out, "     qop: %d\n", ptr->qop);
-	fprintf(fd_out, "     service: %d\n", ptr->svc);
+	fprintf(fd_out, "     qop: %d\n", (int)ptr->qop);
+	fprintf(fd_out, "     service: %d\n", (int)ptr->svc);
 	fprintf(fd_out, "     cred(%p) = { dwLower=%lld, dwUpper=%lld} \n",
 		&ptr->cred,
 		(long long)ptr->cred.dwLower,
@@ -933,15 +933,15 @@ void log_hexdump(bool_t on, const char *title, const u_char *buf,
 	fprintf(fd_out, "%04lx: %s (len=%d)\n",
 		(unsigned long)GetCurrentThreadId(), title, len);
 	for (i = 0; i < len; i += 0x10) {
-		fprintf(fd_out, "  %04x: ", (u_int)(i + offset));
+		fprintf(fd_out, "  %04x: ", (int)(i + offset));
 		jm = len - i;
 		jm = jm > 16 ? 16 : jm;
 
 		for (j = 0; j < jm; j++) {
 			if ((j % 2) == 1)
-				fprintf(fd_out, "%02x ", (u_int) buf[i+j]);
+				fprintf(fd_out, "%02x ", (int) buf[i+j]);
 			else
-				fprintf(fd_out, "%02x", (u_int) buf[i+j]);
+				fprintf(fd_out, "%02x", (int) buf[i+j]);
 		}
 		for (; j < 16; j++) {
 			if ((j % 2) == 1) fprintf(fd_out, "   ");
@@ -952,7 +952,7 @@ void log_hexdump(bool_t on, const char *title, const u_char *buf,
 		for (j = 0; j < jm; j++) {
 			c = buf[i+j];
 			c = isprint(c) ? c : '.';
-			fprintf(fd_out, "%c", c);
+			fprintf(fd_out, "%c", (int)c);
 		}
 		fprintf(fd_out, "\n");
 	}
