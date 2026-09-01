@@ -135,7 +135,7 @@ AUTH *
 authsspi_create_default(CLIENT *clnt, char *service, int svc)
 {
 	AUTH *auth = NULL;
-	uint32_t maj_stat = 0;
+	SECURITY_STATUS maj_stat = 0;
 	sspi_buffer_desc sname;
     sspi_name_t name = SSPI_C_NO_NAME;
     unsigned char sec_pkg_name[] = "Kerberos";
@@ -164,7 +164,7 @@ authsspi_create_default(CLIENT *clnt, char *service, int svc)
     maj_stat = AcquireCredentialsHandleA(NULL, (LPSTR)sec_pkg_name, SECPKG_CRED_BOTH,
         NULL, NULL, NULL, NULL, &sec->cred, &sec->expiry);
     if (maj_stat != SEC_E_OK) {
-        log_debug("authgss_create_default: AcquireCredentialsHandleA failed with %x", maj_stat);
+        log_debug("authgss_create_default: AcquireCredentialsHandleA failed with 0x%lx", (long)maj_stat);
         free(sec);
         goto out;
     }
@@ -208,7 +208,7 @@ authsspi_marshal(AUTH *auth, XDR *xdrs, u_int *seq)
 	char tmp[MAX_AUTH_BYTES];
 	struct rpc_sspi_data *gd;
 	sspi_buffer_desc rpcbuf, checksum;
-	uint32_t maj_stat;
+	SECURITY_STATUS maj_stat;
 	bool_t xdr_stat;
 
     log_debug("in authgss_marshal()");
@@ -348,7 +348,8 @@ authsspi_refresh(AUTH *auth, void *tmp)
 	struct rpc_sspi_data *gd;
 	struct rpc_sspi_init_res gr;
     sspi_buffer_desc *recv_tokenp, send_token;
-	uint32_t maj_stat, call_stat, i;
+	SECURITY_STATUS maj_stat;
+        uint32_t call_stat, i;
 	unsigned long ret_flags;
     unsigned long flags =
         ISC_REQ_MUTUAL_AUTH|ISC_REQ_INTEGRITY|ISC_REQ_ALLOCATE_MEMORY;
@@ -655,11 +656,11 @@ authsspi_unwrap(AUTH *auth, XDR *xdrs, xdrproc_t xdr_func, caddr_t xdr_ptr, u_in
 				 gd->sec->svc, seq));
 }
 
-uint32_t sspi_get_mic(void *arg_ctx, u_int qop, u_int seq,
-                        sspi_buffer_desc *bufin, sspi_buffer_desc *bufout)
+SECURITY_STATUS sspi_get_mic(void *arg_ctx, u_int qop, u_int seq,
+	sspi_buffer_desc *bufin, sspi_buffer_desc *bufout)
 {
     PCtxtHandle ctx = arg_ctx;
-    uint32_t maj_stat;
+    SECURITY_STATUS maj_stat;
     SecPkgContext_Sizes ContextSizes;
     SecBufferDesc desc;
     SecBuffer sec_tkn[2];    
@@ -694,7 +695,7 @@ uint32_t sspi_get_mic(void *arg_ctx, u_int qop, u_int seq,
     return maj_stat;
 }
 
-uint32_t sspi_verify_mic(void *arg_ctx, u_int seq, sspi_buffer_desc *bufin,
+SECURITY_STATUS sspi_verify_mic(void *arg_ctx, u_int seq, sspi_buffer_desc *bufin,
                             sspi_buffer_desc *bufout, unsigned long *qop_state)
 {
     PCtxtHandle ctx = arg_ctx;
@@ -725,7 +726,7 @@ void sspi_release_buffer(sspi_buffer_desc *buf)
     buf->length = 0;
 }
 
-uint32_t sspi_import_name(sspi_buffer_desc *name_in, sspi_name_t *name_out)
+SECURITY_STATUS sspi_import_name(sspi_buffer_desc *name_in, sspi_name_t *name_out)
 {
     *name_out = calloc((size_t)name_in->length + 5L, sizeof(char));
     if (*name_out == NULL)
@@ -739,11 +740,11 @@ uint32_t sspi_import_name(sspi_buffer_desc *name_in, sspi_name_t *name_out)
     return SEC_E_OK;
 }
 
-uint32_t sspi_wrap(void *arg_ctx, u_int seq, sspi_buffer_desc *bufin,
+SECURITY_STATUS sspi_wrap(void *arg_ctx, u_int seq, sspi_buffer_desc *bufin,
                    sspi_buffer_desc *bufout, u_int *conf_state)
 {
     PCtxtHandle ctx = arg_ctx;
-    uint32_t maj_stat;
+    SECURITY_STATUS maj_stat;
     SecBufferDesc BuffDesc;
     SecBuffer SecBuff[3];
     ULONG ulQop = 0;
@@ -793,7 +794,7 @@ out:
     return maj_stat;
 }
 
-uint32_t sspi_unwrap(void *arg_ctx, u_int seq, sspi_buffer_desc *bufin,
+SECURITY_STATUS sspi_unwrap(void *arg_ctx, u_int seq, sspi_buffer_desc *bufin,
                      sspi_buffer_desc *bufout, u_int *conf_state,
                      unsigned long *qop_state)
 {
@@ -888,7 +889,7 @@ void print_negotiated_attrs(PCtxtHandle ctx)
 {
     SecPkgContext_Sizes ContextSizes;
     unsigned long  flags;
-    uint32_t maj_stat;
+    SECURITY_STATUS maj_stat;
 
     maj_stat = QueryContextAttributesA(ctx, SECPKG_ATTR_FLAGS, &flags);
     if (maj_stat != SEC_E_OK) return;

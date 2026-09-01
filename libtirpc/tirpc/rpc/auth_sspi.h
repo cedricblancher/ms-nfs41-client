@@ -101,17 +101,17 @@ bool_t xdr_rpc_sspi_data(XDR *xdrs, xdrproc_t xdr_func, caddr_t xdr_ptr,
 AUTH *authsspi_create(CLIENT *, sspi_name_t, struct rpc_sspi_sec *);
 AUTH *authsspi_create_default(CLIENT *, char *, int);
 bool_t authsspi_service(AUTH *auth, int svc);
-uint32_t sspi_get_mic(void *ctx, u_int qop, u_int seq,
+SECURITY_STATUS sspi_get_mic(void *ctx, u_int qop, u_int seq,
                       sspi_buffer_desc *bufin, sspi_buffer_desc *bufout);
-uint32_t sspi_verify_mic(void *ctx, u_int seq, sspi_buffer_desc *bufin,
+SECURITY_STATUS sspi_verify_mic(void *ctx, u_int seq, sspi_buffer_desc *bufin,
                          sspi_buffer_desc *bufout, unsigned long *qop_state);
-uint32_t sspi_wrap(void *ctx, u_int seq, sspi_buffer_desc *bufin,
+SECURITY_STATUS sspi_wrap(void *ctx, u_int seq, sspi_buffer_desc *bufin,
                          sspi_buffer_desc *bufout, u_int *conf_state);
-uint32_t sspi_unwrap(void *ctx, u_int seq, sspi_buffer_desc *bufin,
+SECURITY_STATUS sspi_unwrap(void *ctx, u_int seq, sspi_buffer_desc *bufin,
                      sspi_buffer_desc *bufout, u_int *conf_state,
                      unsigned long *qop_state);
 void sspi_release_buffer(sspi_buffer_desc *buf);
-uint32_t sspi_import_name(sspi_buffer_desc *name_in, sspi_name_t *name_out);
+SECURITY_STATUS sspi_import_name(sspi_buffer_desc *name_in, sspi_name_t *name_out);
 
 void log_debug(const char *fmt, ...);
 void log_status(char *m, uint32_t major, uint32_t minor);
