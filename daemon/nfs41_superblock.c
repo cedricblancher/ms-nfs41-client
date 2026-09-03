@@ -132,34 +132,8 @@ static int get_superblock_attrs(
     superblock->link_support = info.link_support;
     superblock->symlink_support = info.symlink_support;
     superblock->nfs_namedattr_support = supports_named_attrs;
-
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-    if (root->force_case_preserving == TRISTATE_BOOL_NOT_SET) {
-        superblock->case_preserving = info.case_preserving;
-    }
-    else {
-        superblock->case_preserving = BOOL2BIT(root->force_case_preserving);
-        DPRINTF(0,
-            ("get_superblock_attrs(fsid=(%llu,%llu)): "
-            "OVERRIDING case_preserving to %d\n",
-            superblock->fsid.major, superblock->fsid.minor,
-            (int)superblock->case_preserving));
-    }
-    if (root->force_case_insensitive == TRISTATE_BOOL_NOT_SET) {
-        superblock->case_insensitive = info.case_insensitive;
-    }
-    else {
-        superblock->case_insensitive = BOOL2BIT(root->force_case_insensitive);
-        DPRINTF(0,
-            ("get_superblock_attrs(fsid=(%llu,%llu)): "
-            "OVERRIDING case_insensitive to %d\n",
-            superblock->fsid.major, superblock->fsid.minor,
-            (int)superblock->case_insensitive));
-    }
-#else
     superblock->case_preserving = info.case_preserving;
     superblock->case_insensitive = info.case_insensitive;
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
 
 #ifndef NFS41_DRIVER_CASEINSENSITIVE_FS_SUPPORT
     if (superblock->case_insensitive) {

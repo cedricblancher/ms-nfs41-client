@@ -49,10 +49,6 @@ int nfs41_root_create(
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
     IN bool write_thru,
     IN bool nocache,
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-    IN tristate_bool force_case_preserving,
-    IN tristate_bool force_case_insensitive,
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
     IN DWORD nfsvers,
     IN uint32_t sec_flavor,
     IN uint32_t wsize,
@@ -66,20 +62,6 @@ int nfs41_root_create(
     long unctagnum = -1;
 #endif /* !NFS41_DRIVER_MOUNT_UNCTAGNUMS */
 
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-    DPRINTF(NSLVL,
-        ("--> nfs41_root_create(name='%s', port=%d, "
-            "use_nfspubfh=%d, unctagnum=%ld, "
-            "write_thru=%d, nocache=%d, "
-            "force_case_preserving=%d force_case_insensitive=%d"
-            "nfsvers=%d)\n",
-            name, port,
-            (int)use_nfspubfh,
-            (long)unctagnum,
-            (int)write_thru, (int)nocache,
-            (int)force_case_preserving, (int)force_case_insensitive,
-            (int)nfsvers));
-#else
     DPRINTF(NSLVL,
         ("--> nfs41_root_create(name='%s', port=%d, "
             "use_nfspubfh=%d, unctagnum=0x%lx, "
@@ -90,7 +72,6 @@ int nfs41_root_create(
             (long)unctagnum,
             (int)write_thru, (int)nocache,
             (int)nfsvers));
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
 
     root = calloc(1, sizeof(nfs41_root));
     if (root == NULL) {
@@ -100,10 +81,6 @@ int nfs41_root_create(
 
     list_init(&root->clients);
     root->use_nfspubfh = use_nfspubfh;
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-    root->force_case_preserving = force_case_preserving;
-    root->force_case_insensitive = force_case_insensitive;
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
 
     /*
      * nfs41_root_mount_addrs() will enable NFSv4.2 features (like
@@ -161,9 +138,6 @@ int nfs41_root_create(
         unctagnum,
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
         write_thru, nocache,
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-        root->force_case_preserving, root->force_case_insensitive,
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
         sec_flavor, &root->client_owner);
     if (status) {
         eprintf("nfs41_client_owner() failed with %d\n", status);

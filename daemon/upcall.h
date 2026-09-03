@@ -45,10 +45,6 @@ typedef struct __mount_upcall_args {
     DWORD       write_thru;
     DWORD       nocache;
     DWORD       nfsvers;
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-    tristate_bool force_case_preserving;
-    tristate_bool force_case_insensitive;
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
     DWORD       lease_time;
     NFS41_FILE_FS_ATTRIBUTE_INFORMATION FsAttrs;
 } mount_upcall_args;

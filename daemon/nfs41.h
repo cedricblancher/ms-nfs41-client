@@ -325,10 +325,6 @@ typedef struct __nfs41_root {
     uint32_t uid;
     uint32_t gid;
     DWORD sec_flavor;
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-    tristate_bool force_case_preserving;
-    tristate_bool force_case_insensitive;
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
 } nfs41_root;
 
 
@@ -342,10 +338,6 @@ int nfs41_root_create(
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
     IN bool write_thru,
     IN bool nocache,
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-    IN tristate_bool force_case_preserving,
-    IN tristate_bool force_case_insensitive,
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
     IN DWORD nfsvers,
     IN uint32_t sec_flavor,
     IN uint32_t wsize,
@@ -473,10 +465,6 @@ int nfs41_client_owner(
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
     IN bool write_thru,
     IN bool nocache,
-#ifdef NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS
-    IN tristate_bool force_case_preserving,
-    IN tristate_bool force_case_insensitive,
-#endif /* NFS41_DRIVER_HACK_FORCE_FILENAME_CASE_MOUNTOPTIONS */
     IN uint32_t sec_flavor,
     OUT client_owner4 *owner);
 
