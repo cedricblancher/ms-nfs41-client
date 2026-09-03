@@ -272,7 +272,6 @@ NTSTATUS handle_upcall(
         status = marshal_nfs41_dirquery(entry, pbOut, cbOut, len);
         break;
     case NFS41_SYSOP_FILE_QUERY:
-    case NFS41_SYSOP_FILE_QUERY_TIME_BASED_COHERENCY:
         status = marshal_nfs41_filequery(entry, pbOut, cbOut, len);
         break;
     case NFS41_SYSOP_FILE_SET:
@@ -781,7 +780,6 @@ NTSTATUS nfs41_downcall(
             status = unmarshal_nfs41_dirquery(cur, &inbuf);
             break;
         case NFS41_SYSOP_FILE_QUERY:
-        case NFS41_SYSOP_FILE_QUERY_TIME_BASED_COHERENCY:
             unmarshal_nfs41_getattr(cur, &inbuf);
             break;
         case NFS41_SYSOP_EA_GET:

@@ -134,9 +134,6 @@ DEFINE_GUID(GUID_ECP_OPEN_PARAMETERS,
 #ifdef USE_LOOKASIDELISTEX_FOR_UPDOWNCALLENTRY_MEM
 LOOKASIDE_LIST_EX updowncall_entry_upcall_lookasidelist;
 #endif /* USE_LOOKASIDELISTEX_FOR_UPDOWNCALLENTRY_MEM */
-#ifdef USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM
-LOOKASIDE_LIST_EX fcblistentry_lookasidelist;
-#endif /* USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM */
 
 #ifdef ENABLE_TIMINGS
 nfs41_timings lookup;
@@ -169,7 +166,6 @@ PRDBSS_DEVICE_OBJECT nfs41_dev;
 KEVENT upcallEvent;
 nfs41_updowncall_list upcalllist;
 nfs41_updowncall_list downcalllist;
-nfs41_fcb_list openlist;
 
 nfs41_offloadcontext_list offloadcontextlist;
 
@@ -187,32 +183,6 @@ LARGE_INTEGER unix_time_diff;
 
 nfs41_init_driver_state nfs41_init_state = NFS41_INIT_DRIVER_STARTABLE;
 nfs41_start_driver_state nfs41_start_state = NFS41_START_DRIVER_STARTABLE;
-
-nfs41_fcb_list_entry *nfs41_allocate_nfs41_fcb_list_entry(void)
-{
-    nfs41_fcb_list_entry *e;
-#ifdef USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM
-    e = ExAllocateFromLookasideListEx(
-        &fcblistentry_lookasidelist);
-
-#else
-    e = RxAllocatePoolWithTag(NonPagedPoolNx,
-        sizeof(nfs41_fcb_list_entry),
-        NFS41_MM_POOLTAG_OPEN);
-#endif /* USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM */
-
-    return e;
-}
-
-void nfs41_free_nfs41_fcb_list_entry(nfs41_fcb_list_entry *entry)
-{
-#ifdef USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM
-    ExFreeToLookasideListEx(&fcblistentry_lookasidelist,
-        entry);
-#else
-    RxFreePool(entry);
-#endif /* USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM */
-}
 
 NTSTATUS marshall_unicode_string_as_utf8(
     IN OUT unsigned char **pos,
@@ -990,39 +960,6 @@ out:
     return status;
 }
 
-VOID nfs41_remove_fcb_entry(
-    PMRX_SRV_OPEN SrvOpen)
-{
-    PLIST_ENTRY pEntry;
-    nfs41_fcb_list_entry *cur;
-    ExAcquireFastMutexUnsafe(&openlist.lock);
-
-    pEntry = openlist.head.Flink;
-    while (!IsListEmpty(&openlist.head)) {
-        cur = (nfs41_fcb_list_entry *)CONTAINING_RECORD(pEntry,
-                nfs41_fcb_list_entry, next);
-        if (cur->srvopen == SrvOpen) {
-#ifdef DEBUG_CLOSE
-            DbgP("nfs41_remove_fcb_entry: "
-                "Found match for fcb=0x%p srvopen=0x%p\n",
-                cur->srvopen->pFcb, cur->srvopen);
-#endif
-            RemoveEntryList(pEntry);
-            nfs41_free_nfs41_fcb_list_entry(cur);
-            break;
-        }
-        if (pEntry->Flink == &openlist.head) {
-#ifdef DEBUG_CLOSE
-            DbgP("nfs41_remove_fcb_entry: reached EOL looking "
-                "for SrvOpen=0x%p\n", SrvOpen);
-#endif
-            break;
-        }
-        pEntry = pEntry->Flink;
-    }
-    ExReleaseFastMutexUnsafe(&openlist.lock);
-}
-
 NTSTATUS nfs41_Flush(
     IN OUT PRX_CONTEXT RxContext)
 {
@@ -1047,42 +984,6 @@ NTSTATUS nfs41_DeallocateForFcb(
     return STATUS_SUCCESS;
 }
 
-VOID nfs41_update_fcb_list(
-    PMRX_FCB fcb,
-    ULONGLONG ChangeTime)
-{
-    PLIST_ENTRY pEntry;
-    nfs41_fcb_list_entry *cur;
-    ExAcquireFastMutexUnsafe(&openlist.lock);
-    pEntry = openlist.head.Flink;
-    while (!IsListEmpty(&openlist.head)) {
-        cur = (nfs41_fcb_list_entry *)CONTAINING_RECORD(pEntry,
-                nfs41_fcb_list_entry, next);
-        if ((cur->srvopen->pFcb == fcb) &&
-            (cur->ChangeTime != ChangeTime)) {
-#if defined(DEBUG_FILE_SET) || defined(DEBUG_ACL_SET) || \
-    defined(DEBUG_WRITE) || defined(DEBUG_EA_SET)
-            DbgP("nfs41_update_fcb_list: Found match for fcb 0x%p: "
-                "updating %llu to %llu\n",
-                fcb, cur->ChangeTime, ChangeTime);
-#endif
-            cur->ChangeTime = ChangeTime;
-            break;
-        }
-        /* place an upcall for this srv_open */
-        if (pEntry->Flink == &openlist.head) {
-#if defined(DEBUG_FILE_SET) || defined(DEBUG_ACL_SET) || \
-    defined(DEBUG_WRITE) || defined(DEBUG_EA_SET)
-            DbgP("nfs41_update_fcb_list: reached EOL loooking for "
-                "fcb=0x%p\n", fcb);
-#endif
-            break;
-        }
-        pEntry = pEntry->Flink;
-    }
-    ExReleaseFastMutexUnsafe(&openlist.lock);
-}
-
 NTSTATUS nfs41_IsValidDirectory (
     IN OUT PRX_CONTEXT RxContext,
     IN PUNICODE_STRING DirectoryName)
@@ -1097,9 +998,9 @@ NTSTATUS nfs41_ComputeNewBufferingState(
 {
     NTSTATUS status = STATUS_SUCCESS;
     ULONG flag = PtrToUlong(pMRxContext);
-#ifdef DEBUG_TIME_BASED_COHERENCY
+#ifdef DEBUG_CACHE
     ULONG oldFlags = pSrvOpen->BufferingFlags;
-#endif
+#endif /* DEBUG_CACHE */
     switch(flag) {
     case DISABLE_CACHING:
         if (pSrvOpen->BufferingFlags &
@@ -1132,12 +1033,12 @@ NTSTATUS nfs41_ComputeNewBufferingState(
         break;
     }
 
-#ifdef DEBUG_TIME_BASED_COHERENCY
+#ifdef DEBUG_CACHE
     DbgP("nfs41_ComputeNewBufferingState: '%wZ' pSrvOpen 0x%p Old %08x New %08x\n",
          pSrvOpen->pAlreadyPrefixedName, pSrvOpen, oldFlags,
          pSrvOpen->BufferingFlags);
     *pNewBufferingState = pSrvOpen->BufferingFlags;
-#endif
+#endif /* DEBUG_CACHE */
     return status;
 }
 
@@ -1147,11 +1048,7 @@ void enable_caching(
     ULONGLONG ChangeTime,
     HANDLE session)
 {
-    PNFS41_SRV_OPEN nfs41_srvopen = NFS41GetSrvOpenExtension(SrvOpen);
     ULONG flag = 0;
-    PLIST_ENTRY pEntry;
-    nfs41_fcb_list_entry *cur;
-    BOOLEAN found = FALSE;
 
     if (SrvOpen->DesiredAccess & FILE_READ_DATA)
         flag = ENABLE_READ_CACHING;
@@ -1163,56 +1060,14 @@ void enable_caching(
             !nfs41_fobx->write_thru)
         flag = ENABLE_READWRITE_CACHING;
 
-#if defined(DEBUG_TIME_BASED_COHERENCY) || \
-        defined(DEBUG_WRITE) || defined(DEBUG_READ)
+#if defined(DEBUG_WRITE) || defined(DEBUG_READ)
     print_caching_level(1, flag, SrvOpen->pAlreadyPrefixedName);
-#endif
+#endif /* defined(DEBUG_WRITE) || defined(DEBUG_READ) */
 
     if (!flag)
         return;
 
     RxChangeBufferingState((PSRV_OPEN)SrvOpen, ULongToPtr(flag), 1);
-
-    ExAcquireFastMutexUnsafe(&openlist.lock);
-    pEntry = openlist.head.Flink;
-    while (!IsListEmpty(&openlist.head)) {
-        cur = (nfs41_fcb_list_entry *)CONTAINING_RECORD(pEntry,
-                nfs41_fcb_list_entry, next);
-        if ((cur->srvopen != NULL) &&
-            (cur->srvopen->pFcb == SrvOpen->pFcb)) {
-#ifdef DEBUG_TIME_BASED_COHERENCY
-            DbgP("enable_caching: Looked&Found match for fcb=0x%p '%wZ'\n",
-                SrvOpen->pFcb, SrvOpen->pAlreadyPrefixedName);
-#endif
-            cur->skip = FALSE;
-            found = TRUE;
-            break;
-        }
-        if (pEntry->Flink == &openlist.head) {
-#ifdef DEBUG_TIME_BASED_COHERENCY
-            DbgP("enable_caching: reached EOL looking for fcb=0x%p '%wZ'\n",
-                SrvOpen->pFcb, SrvOpen->pAlreadyPrefixedName);
-#endif
-            break;
-        }
-        pEntry = pEntry->Flink;
-    }
-    if (!found && (!IS_NFS41_OPEN_DELEGATE_NONE(nfs41_srvopen->deleg_type))) {
-        nfs41_fcb_list_entry *oentry;
-#ifdef DEBUG_TIME_BASED_COHERENCY
-        DbgP("enable_caching: delegation recalled: srv_open=0x%p\n", SrvOpen);
-#endif
-        oentry = nfs41_allocate_nfs41_fcb_list_entry();
-        if (oentry == NULL)
-            goto out_release_fcblistlock;
-        oentry->srvopen = SrvOpen;
-        oentry->ChangeTime = ChangeTime;
-        oentry->skip = FALSE;
-        InsertTailList(&openlist.head, &oentry->next);
-        nfs41_srvopen->deleg_type = NFS41_OPEN_DELEGATE_NONE;
-    }
-out_release_fcblistlock:
-    ExReleaseFastMutexUnsafe(&openlist.lock);
 }
 
 NTSTATUS nfs41_CompleteBufferingStateChangeRequest(
@@ -1612,133 +1467,6 @@ NTSTATUS nfs41_init_ops(void)
     return(STATUS_SUCCESS);
 }
 
-KSTART_ROUTINE fcbopen_main;
-
-VOID fcbopen_main(PVOID ctx)
-{
-    NTSTATUS status;
-    LARGE_INTEGER timeout;
-
-//    DbgEn();
-    timeout.QuadPart = RELATIVE(SECONDS(30));
-    while(1) {
-        PLIST_ENTRY pEntry;
-        nfs41_fcb_list_entry *cur;
-        status = KeDelayExecutionThread(KernelMode, TRUE, &timeout);
-        ExAcquireFastMutexUnsafe(&openlist.lock);
-        pEntry = openlist.head.Flink;
-        while (!IsListEmpty(&openlist.head)) {
-            PNFS41_NETROOT_EXTENSION pNetRootContext;
-            nfs41_updowncall_entry *entry = NULL;
-            FILE_BASIC_INFORMATION binfo;
-            PNFS41_FCB nfs41_fcb;
-            cur = (nfs41_fcb_list_entry *)CONTAINING_RECORD(pEntry,
-                    nfs41_fcb_list_entry, next);
-
-#ifdef DEBUG_TIME_BASED_COHERENCY
-            DbgP("fcbopen_main: Checking attributes for srvopen=0x%p fcb=0x%p "
-                "change_time=%llu skipping=%d\n",
-                cur->srvopen,
-                ((cur->srvopen != NULL)?cur->srvopen->pFcb:NULL),
-                cur->ChangeTime,
-                cur->skip);
-#endif
-            if (cur->skip) goto out;
-
-            PNFS41_SRV_OPEN nfs41_srvopen =
-                NFS41GetSrvOpenExtension(cur->srvopen);
-
-            /*
-             * This can only happen if |nfs41_CloseSrvOpen()|
-             * was called
-             */
-            if ((nfs41_srvopen == NULL) ||
-                (nfs41_srvopen->sec_ctx.ClientToken == NULL)) {
-                goto out;
-            }
-
-            PNFS41_V_NET_ROOT_EXTENSION pVNetRootContext =
-                NFS41GetVNetRootExtension(cur->srvopen->pVNetRoot);
-
-            if (!pVNetRootContext->timebasedcoherency) {
-#ifdef DEBUG_TIME_BASED_COHERENCY
-                DbgP("fcbopen_main: timebasedcoherency disabled for "
-                    "fcb=0x%p\n", cur->srvopen->pFcb);
-#endif
-                goto out;
-            }
-
-            pNetRootContext =
-                NFS41GetNetRootExtension(cur->srvopen->pFcb->pNetRoot);
-
-            /* place an upcall for this srv_open */
-            status = nfs41_UpcallCreate(
-                NFS41_SYSOP_FILE_QUERY_TIME_BASED_COHERENCY,
-                &nfs41_srvopen->sec_ctx, pVNetRootContext->session,
-                nfs41_srvopen->nfs41_open_state,
-                pNetRootContext->nfs41d_version, NULL, &entry);
-            if (status) goto out;
-
-            entry->u.QueryFile.InfoClass = FileBasicInformation;
-            entry->u.QueryFile.buf = &binfo;
-            entry->u.QueryFile.buf_len = sizeof(binfo);
-
-            status = nfs41_UpcallWaitForReply(entry, UPCALL_TIMEOUT_DEFAULT);
-            if (status) goto out;
-
-            if (cur->ChangeTime != entry->ChangeTime) {
-                ULONG flag = DISABLE_CACHING;
-                PMRX_SRV_OPEN srv_open;
-                PLIST_ENTRY psrvEntry;
-#ifdef DEBUG_TIME_BASED_COHERENCY
-                DbgP("fcbopen_main: old ctime=%llu new_ctime=%llu\n",
-                    cur->ChangeTime, entry->ChangeTime);
-#endif
-                cur->ChangeTime = entry->ChangeTime;
-                cur->skip = TRUE;
-                psrvEntry = &cur->srvopen->pFcb->SrvOpenList;
-                psrvEntry = psrvEntry->Flink;
-                while (!IsListEmpty(&cur->srvopen->pFcb->SrvOpenList)) {
-                    srv_open = (PMRX_SRV_OPEN)CONTAINING_RECORD(psrvEntry,
-                            MRX_SRV_OPEN, SrvOpenQLinks);
-                    if (srv_open->DesiredAccess &
-                            (FILE_READ_DATA | FILE_WRITE_DATA | FILE_APPEND_DATA)) {
-#ifdef DEBUG_TIME_BASED_COHERENCY
-                        DbgP("fcbopen_main: ************ Invalidate the cache '%wZ'"
-                             "************\n", srv_open->pAlreadyPrefixedName);
-#endif
-                        RxIndicateChangeOfBufferingStateForSrvOpen(
-                            cur->srvopen->pFcb->pNetRoot->pSrvCall, srv_open,
-                            srv_open->Key, ULongToPtr(flag));
-                    }
-                    if (psrvEntry->Flink == &cur->srvopen->pFcb->SrvOpenList) {
-#ifdef DEBUG_TIME_BASED_COHERENCY
-                        DbgP("fcbopen_main: reached end of srvopen for fcb 0x%p\n",
-                            cur->srvopen->pFcb);
-#endif
-                        break;
-                    }
-                    psrvEntry = psrvEntry->Flink;
-                };
-            }
-            nfs41_fcb = NFS41GetFcbExtension(cur->srvopen->pFcb);
-            nfs41_fcb->changeattr = entry->ChangeTime;
-out:
-            nfs41_UpcallDestroy(entry);
-            entry = NULL;
-            if (pEntry->Flink == &openlist.head) {
-#ifdef DEBUG_TIME_BASED_COHERENCY
-                DbgP("fcbopen_main: reached end of the fcb list\n");
-#endif
-                break;
-            }
-            pEntry = pEntry->Flink;
-        }
-        ExReleaseFastMutexUnsafe(&openlist.lock);
-    }
-//    DbgEx();
-}
-
 /* Main driver entry point, must be public symbol */
 NTSTATUS DriverEntry(
     IN PDRIVER_OBJECT drv,
@@ -1749,8 +1477,6 @@ NTSTATUS DriverEntry(
     UNICODE_STRING dev_name, user_dev_name;
     PNFS41_DEVICE_EXTENSION dev_exts;
     TIME_FIELDS jan_1_1970 = {1970, 1, 1, 0, 0, 0, 0, 0};
-    ACCESS_MASK mask = 0;
-    OBJECT_ATTRIBUTES oattrs;
 
     DbgEn();
 
@@ -1800,11 +1526,9 @@ NTSTATUS DriverEntry(
     KeInitializeEvent(&upcallEvent, SynchronizationEvent, FALSE );
     ExInitializeFastMutex(&upcalllist.lock);
     ExInitializeFastMutex(&downcalllist.lock);
-    ExInitializeFastMutex(&openlist.lock);
     ExInitializeFastMutex(&offloadcontextlist.lock);
     InitializeListHead(&upcalllist.head);
     InitializeListHead(&downcalllist.head);
-    InitializeListHead(&openlist.head);
     InitializeListHead(&offloadcontextlist.head);
 #ifdef USE_LOOKASIDELISTEX_FOR_UPDOWNCALLENTRY_MEM
     status = ExInitializeLookasideListEx(
@@ -1820,25 +1544,6 @@ NTSTATUS DriverEntry(
         goto out_unregister;
     }
 #endif /* USE_LOOKASIDELISTEX_FOR_UPDOWNCALLENTRY_MEM */
-#ifdef USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM
-    status = ExInitializeLookasideListEx(
-        &fcblistentry_lookasidelist, NULL, NULL,
-        NonPagedPoolNx, 0, sizeof(nfs41_fcb_list_entry),
-        NFS41_MM_POOLTAG_OPEN, EX_MAXIMUM_LOOKASIDE_DEPTH_LIMIT);
-    if (status != STATUS_SUCCESS) {
-        print_error("DriverEntry: "
-            "ExInitializeLookasideListEx() for "
-            "fcblistentry_lookasidelist failed "
-            "with status=0x%lx\n",
-            (long)status);
-        goto out_unregister;
-    }
-#endif /* USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM */
-    InitializeObjectAttributes(&oattrs, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);
-    status = PsCreateSystemThread(&dev_exts->openlistHandle, mask,
-        &oattrs, NULL, NULL, &fcbopen_main, NULL);
-    if (status != STATUS_SUCCESS)
-        goto out_unregister;
 
     drv->DriverUnload = nfs41_driver_unload;
 
@@ -1890,9 +1595,6 @@ unload:
 #ifdef USE_LOOKASIDELISTEX_FOR_UPDOWNCALLENTRY_MEM
     ExDeleteLookasideListEx(&updowncall_entry_upcall_lookasidelist);
 #endif /* USE_LOOKASIDELISTEX_FOR_UPDOWNCALLENTRY_MEM */
-#ifdef USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM
-    ExDeleteLookasideListEx(&fcblistentry_lookasidelist);
-#endif /* USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM */
 
     DbgP("nfs41_driver_unload: driver unloaded 0x%p\n", drv);
     DbgR();

@@ -70,7 +70,6 @@ static const nfs41_upcall_op *g_upcall_op_table[] = {
     &nfs41_op_unlock,
     &nfs41_op_readdir,
     &nfs41_op_getattr, /* NFS41_SYSOP_FILE_QUERY */
-    &nfs41_op_getattr, /* NFS41_SYSOP_FILE_QUERY_TIME_BASED_COHERENCY */
     &nfs41_op_setattr, /* NFS41_SYSOP_FILE_SET */
     &nfs41_op_setattr, /* NFS41_SYSOP_FILE_SET_AT_CLEANUP */
     &nfs41_op_getexattr,

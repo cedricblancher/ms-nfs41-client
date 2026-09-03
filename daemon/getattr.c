@@ -86,7 +86,7 @@ int nfs41_cached_getattr(
     return status;
 }
 
-/* NFS41_SYSOP_FILE_QUERY, NFS41_SYSOP_FILE_QUERY_TIME_BASED_COHERENCY */
+/* NFS41_SYSOP_FILE_QUERY */
 static int parse_getattr(
     const unsigned char *restrict buffer,
     uint32_t length,

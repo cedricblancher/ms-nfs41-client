@@ -1282,20 +1282,10 @@ retry_on_link:
             nfs41_fobx->nocache = TRUE;
         } else if (IS_NFS41_OPEN_DELEGATE_NONE(entry->u.Open.deleg_type) &&
             (Fcb->OpenCount == 0)) {
-            nfs41_fcb_list_entry *oentry;
 #ifdef DEBUG_OPEN
             DbgP("nfs41_Create: received no delegations: srv_open=0x%p "
                 "ctime=%llu\n", SrvOpen, entry->ChangeTime);
 #endif
-            oentry = nfs41_allocate_nfs41_fcb_list_entry();
-            if (oentry == NULL) {
-                status = STATUS_INSUFFICIENT_RESOURCES;
-                goto out;
-            }
-            oentry->srvopen = SrvOpen;
-            oentry->ChangeTime = entry->ChangeTime;
-            oentry->skip = FALSE;
-            nfs41_AddEntry(openlist.lock, openlist, oentry);
         }
     }
 
@@ -1654,10 +1644,13 @@ NTSTATUS nfs41_CloseSrvOpen(
     FsRtlEnterFileSystem();
 
     /*
-     * Remove these BEOFRE doing the |NFS41_SYSOP_CLOSE|, so noone can issue
-     * a request while the NFS file handle is being destroyed
+     * Remove offloadcontext before the |NFS41_SYSOP_CLOSE| upcall, so
+     * noone can issue a request while the NFS file handle is being destroyed
+     *
+     * FIXME: |FSCTL_OFFLOAD_WRITE| specfifies |STATUS_FILE_CLOSED|
+     * which should be used if the file is getting closed, or using a
+     * |STORAGE_OFFLOAD_TOKEN| for a file which is no longer open
      */
-    nfs41_remove_fcb_entry(SrvOpen);
     nfs41_remove_offloadcontext_for_srvopen(SrvOpen);
 
     status = nfs41_UpcallCreate(NFS41_SYSOP_CLOSE, &nfs41_srvopen->sec_ctx,

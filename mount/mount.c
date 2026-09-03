@@ -166,8 +166,6 @@ void PrintMountUsage(LPWSTR pProcess)
         "\tnowritethru\tturns on rdbss caching for writes (default)\n"
         "\tcache\tturns on rdbss caching (default)\n"
         "\tnocache\tturns off rdbss caching\n"
-        "\ttimebasedcoherency\tturns on time-based coherency\n"
-        "\tnotimebasedcoherency\tturns off time-based coherency (default, due to bugs)\n"
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
         "\tsrvopencollapse\t"
             "turns on collapsing of multiple file opens into a single NFS handle\n"

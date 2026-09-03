@@ -363,7 +363,6 @@ void nfs41_MountConfig_InitDefaults(
     Config->ReadOnly = FALSE;
     Config->write_thru = FALSE;
     Config->nocache = FALSE;
-    Config->timebasedcoherency = FALSE; /* disabled by default because of bugs */
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
     Config->srvopencollapse = TRUE;
 #endif /* NFS41_DRIVER_COLLAPSEOPEN */
@@ -532,14 +531,6 @@ NTSTATUS nfs41_MountConfig_ParseOptions(
         else if (wcsncmp(L"nocache", Name, NameLen) == 0) {
             status = nfs41_MountConfig_ParseBoolean(Option, &usValue,
                 FALSE, &Config->nocache);
-        }
-        else if (wcsncmp(L"timebasedcoherency", Name, NameLen) == 0) {
-            status = nfs41_MountConfig_ParseBoolean(Option, &usValue,
-                FALSE, &Config->timebasedcoherency);
-        }
-        else if (wcsncmp(L"notimebasedcoherency", Name, NameLen) == 0) {
-            status = nfs41_MountConfig_ParseBoolean(Option, &usValue,
-                TRUE, &Config->timebasedcoherency);
         }
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
         else if (wcsncmp(L"srvopencollapse", Name, NameLen) == 0) {
@@ -1020,7 +1011,6 @@ NTSTATUS nfs41_CreateVNetRoot(
         pVNetRootContext->read_only = Config->ReadOnly;
         pVNetRootContext->write_thru = Config->write_thru;
         pVNetRootContext->nocache = Config->nocache;
-        pVNetRootContext->timebasedcoherency = Config->timebasedcoherency;
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
         pVNetRootContext->srvopencollapse = Config->srvopencollapse;
 #endif /* NFS41_DRIVER_COLLAPSEOPEN */
@@ -1149,7 +1139,6 @@ NTSTATUS nfs41_CreateVNetRoot(
         pVNetRootContext->read_only = Config->ReadOnly;
         pVNetRootContext->write_thru = Config->write_thru;
         pVNetRootContext->nocache = Config->nocache;
-        pVNetRootContext->timebasedcoherency = Config->timebasedcoherency;
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
         pVNetRootContext->srvopencollapse = Config->srvopencollapse;
 #endif /* NFS41_DRIVER_COLLAPSEOPEN */
@@ -1166,7 +1155,6 @@ NTSTATUS nfs41_CreateVNetRoot(
         "ro=%d, "
         "writethru=%d, "
         "nocache=%d "
-        "timebasedcoherency=%d "
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
         "srvopencollapse=%d "
 #endif /* NFS41_DRIVER_COLLAPSEOPEN */
@@ -1190,7 +1178,6 @@ NTSTATUS nfs41_CreateVNetRoot(
         Config->ReadOnly?1:0,
         Config->write_thru?1:0,
         Config->nocache?1:0,
-        Config->timebasedcoherency?1:0,
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
         Config->srvopencollapse?1:0,
 #endif /* NFS41_DRIVER_COLLAPSEOPEN */

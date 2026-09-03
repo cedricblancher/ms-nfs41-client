@@ -150,9 +150,6 @@ DECLARE_EXTERN_CONST_ANSI_STRING(NfsActOnLink);
 #ifdef USE_LOOKASIDELISTEX_FOR_UPDOWNCALLENTRY_MEM
 extern LOOKASIDE_LIST_EX updowncall_entry_upcall_lookasidelist;
 #endif /* USE_LOOKASIDELISTEX_FOR_UPDOWNCALLENTRY_MEM */
-#ifdef USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM
-extern LOOKASIDE_LIST_EX fcblistentry_lookasidelist;
-#endif /* USE_LOOKASIDELISTEX_FOR_FCBLISTENTRY_MEM */
 
 #ifdef ENABLE_TIMINGS
 extern nfs41_timings lookup;
@@ -407,7 +404,6 @@ typedef struct _NFS41_MOUNT_CONFIG {
     BOOLEAN ReadOnly;
     BOOLEAN write_thru;
     BOOLEAN nocache;
-    BOOLEAN timebasedcoherency;
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
     BOOLEAN srvopencollapse;
 #endif /* NFS41_DRIVER_COLLAPSEOPEN */
@@ -517,7 +513,6 @@ typedef struct _NFS41_V_NET_ROOT_EXTENSION {
     BOOLEAN                 read_only;
     BOOLEAN                 write_thru;
     BOOLEAN                 nocache;
-    BOOLEAN                 timebasedcoherency;
 #ifdef NFS41_DRIVER_COLLAPSEOPEN
     BOOLEAN                 srvopencollapse;
 #endif /* NFS41_DRIVER_COLLAPSEOPEN */
@@ -608,25 +603,11 @@ typedef struct _NFS41_DEVICE_EXTENSION {
     PRDBSS_DEVICE_OBJECT    DeviceObject;
     HANDLE                  SharedMemorySection;
     DWORD                   nfs41d_version;
-    HANDLE                  openlistHandle;
 } NFS41_DEVICE_EXTENSION, *PNFS41_DEVICE_EXTENSION;
 
 #define NFS41GetDeviceExtension(DeviceObject)        \
     ((PNFS41_DEVICE_EXTENSION) \
         (((PBYTE)(DeviceObject)) + sizeof(RDBSS_DEVICE_OBJECT)))
-
-typedef struct _nfs41_fcb_list_entry {
-    LIST_ENTRY next;
-    PMRX_SRV_OPEN srvopen;
-    ULONGLONG ChangeTime;
-    BOOLEAN skip;
-} nfs41_fcb_list_entry;
-
-typedef struct _nfs41_fcb_list {
-    FAST_MUTEX  lock;
-    LIST_ENTRY  head;
-} nfs41_fcb_list;
-extern nfs41_fcb_list openlist;
 
 typedef struct _nfs41_offloadcontext_list {
     FAST_MUTEX lock;
@@ -697,9 +678,6 @@ NTSTATUS map_lock_errors(
 NTSTATUS map_symlink_errors(
     NTSTATUS status);
 
-VOID nfs41_remove_fcb_entry(
-    PMRX_SRV_OPEN SrvOpen);
-
 /* nfs41sys_acl.c */
 NTSTATUS marshal_nfs41_getacl(
     nfs41_updowncall_entry *entry,
@@ -736,8 +714,6 @@ NTSTATUS nfs41_QueryDirectory(
     IN OUT PRX_CONTEXT RxContext);
 
 /* nfs41sys_driver.c */
-nfs41_fcb_list_entry *nfs41_allocate_nfs41_fcb_list_entry(void);
-void nfs41_free_nfs41_fcb_list_entry(nfs41_fcb_list_entry *entry);
 NTSTATUS marshall_unicode_string_as_utf8(
     IN OUT unsigned char **pos,
     IN PCUNICODE_STRING str);
@@ -759,9 +735,6 @@ void enable_caching(
     PNFS41_FOBX nfs41_fobx,
     ULONGLONG ChangeTime,
     HANDLE session);
-VOID nfs41_update_fcb_list(
-    PMRX_FCB fcb,
-    ULONGLONG ChangeTime);
 #ifdef DEBUG_OPENFILES
 void print_open_files_netroot(
     IN OUT PNET_ROOT NetRoot);
