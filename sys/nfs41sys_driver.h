@@ -417,11 +417,7 @@ typedef struct _NFS41_MOUNT_CONFIG {
 typedef struct _nfs41_mount_entry {
     LIST_ENTRY next;
     LUID login_id;
-    HANDLE authnone_session;
-    HANDLE authsys_session;
-    HANDLE gss_session;
-    HANDLE gssi_session;
-    HANDLE gssp_session;
+    HANDLE session;
     NFS41_MOUNT_CONFIG Config;
 } nfs41_mount_entry;
 

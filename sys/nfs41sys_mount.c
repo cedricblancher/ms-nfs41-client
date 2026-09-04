@@ -1189,33 +1189,15 @@ NTSTATUS nfs41_CreateVNetRoot(
                 DbgP("Found a matching LUID entry\n");
 #endif
                 found_existing_mount = TRUE;
-                switch(pVNetRootContext->sec_flavor) {
-                case RPCSEC_AUTH_NONE:
-                    if (existing_mount->authnone_session != INVALID_HANDLE_VALUE)
-                        pVNetRootContext->session =
-                            existing_mount->authnone_session;
-                    break;
-                case RPCSEC_AUTH_SYS:
-                    if (existing_mount->authsys_session != INVALID_HANDLE_VALUE)
-                        pVNetRootContext->session =
-                            existing_mount->authsys_session;
-                    break;
-                case RPCSEC_AUTHGSS_KRB5:
-                    if (existing_mount->gssi_session != INVALID_HANDLE_VALUE)
-                        pVNetRootContext->session = existing_mount->gss_session;
-                    break;
-                case RPCSEC_AUTHGSS_KRB5I:
-                    if (existing_mount->gss_session != INVALID_HANDLE_VALUE)
-                        pVNetRootContext->session = existing_mount->gssi_session;
-                    break;
-                case RPCSEC_AUTHGSS_KRB5P:
-                    if (existing_mount->gssp_session != INVALID_HANDLE_VALUE)
-                        pVNetRootContext->session = existing_mount->gssp_session;
-                    break;
+
+                if (existing_mount->session != INVALID_HANDLE_VALUE) {
+                    pVNetRootContext->session = existing_mount->session;
                 }
+
                 if (pVNetRootContext->session &&
-                        pVNetRootContext->session != INVALID_HANDLE_VALUE)
-                    found_matching_flavor = 1;
+                        pVNetRootContext->session != INVALID_HANDLE_VALUE) {
+                    found_matching_flavor = TRUE;
+                }
                 break;
             }
             if (pEntry->Flink == &pNetRootContext->mounts.head)
@@ -1253,21 +1235,7 @@ NTSTATUS nfs41_CreateVNetRoot(
             status = STATUS_INSUFFICIENT_RESOURCES;
             goto out_free;
         }
-        entry->authnone_session = entry->authsys_session =
-            entry->gss_session = entry->gssi_session =
-            entry->gssp_session = INVALID_HANDLE_VALUE;
-        switch (pVNetRootContext->sec_flavor) {
-        case RPCSEC_AUTH_NONE:
-            entry->authnone_session = pVNetRootContext->session; break;
-        case RPCSEC_AUTH_SYS:
-            entry->authsys_session = pVNetRootContext->session; break;
-        case RPCSEC_AUTHGSS_KRB5:
-            entry->gss_session = pVNetRootContext->session; break;
-        case RPCSEC_AUTHGSS_KRB5I:
-            entry->gssi_session = pVNetRootContext->session; break;
-        case RPCSEC_AUTHGSS_KRB5P:
-            entry->gssp_session = pVNetRootContext->session; break;
-        }
+        entry->session = pVNetRootContext->session;
         RtlCopyLuid(&entry->login_id, &luid);
         /*
          * Save mount config so we can use it for
@@ -1284,18 +1252,8 @@ NTSTATUS nfs41_CreateVNetRoot(
             (int)pVNetRootContext->sec_flavor,
             pVNetRootContext->session);
 #endif
-        switch (pVNetRootContext->sec_flavor) {
-        case RPCSEC_AUTH_NONE:
-            existing_mount->authnone_session = pVNetRootContext->session; break;
-        case RPCSEC_AUTH_SYS:
-            existing_mount->authsys_session = pVNetRootContext->session; break;
-        case RPCSEC_AUTHGSS_KRB5:
-            existing_mount->gss_session = pVNetRootContext->session; break;
-        case RPCSEC_AUTHGSS_KRB5I:
-            existing_mount->gssi_session = pVNetRootContext->session; break;
-        case RPCSEC_AUTHGSS_KRB5P:
-            existing_mount->gssp_session = pVNetRootContext->session; break;
-        }
+
+        existing_mount->session = pVNetRootContext->session;
     }
     pNetRootContext->nfs41d_version = nfs41d_version;
 
@@ -1454,39 +1412,13 @@ NTSTATUS nfs41_FinalizeNetRoot(
             (long)mount_tmp->login_id.HighPart,
             (long)mount_tmp->login_id.LowPart);
 #endif
-        if (mount_tmp->authnone_session != INVALID_HANDLE_VALUE) {
-            status = nfs41_unmount(mount_tmp->authnone_session,
+        if (mount_tmp->session != INVALID_HANDLE_VALUE) {
+            status = nfs41_unmount(mount_tmp->session,
                 pNetRootContext->nfs41d_version, UPCALL_TIMEOUT_DEFAULT);
             if (status)
-                print_error("nfs41_unmount AUTH_NONE failed with %d\n", status);
+                print_error("nfs41_unmount failed with %d\n", status);
         }
-        if (mount_tmp->authsys_session != INVALID_HANDLE_VALUE) {
-            status = nfs41_unmount(mount_tmp->authsys_session,
-                pNetRootContext->nfs41d_version, UPCALL_TIMEOUT_DEFAULT);
-            if (status)
-                print_error("nfs41_unmount AUTH_SYS failed with %d\n", status);
-        }
-        if (mount_tmp->gss_session != INVALID_HANDLE_VALUE) {
-            status = nfs41_unmount(mount_tmp->gss_session,
-                pNetRootContext->nfs41d_version, UPCALL_TIMEOUT_DEFAULT);
-            if (status)
-                print_error("nfs41_unmount RPCSEC_GSS_KRB5 failed with %d\n",
-                            status);
-        }
-        if (mount_tmp->gssi_session != INVALID_HANDLE_VALUE) {
-            status = nfs41_unmount(mount_tmp->gssi_session,
-                pNetRootContext->nfs41d_version, UPCALL_TIMEOUT_DEFAULT);
-            if (status)
-                print_error("nfs41_unmount RPCSEC_GSS_KRB5I failed with %d\n",
-                            status);
-        }
-        if (mount_tmp->gssp_session != INVALID_HANDLE_VALUE) {
-            status = nfs41_unmount(mount_tmp->gssp_session,
-                pNetRootContext->nfs41d_version, UPCALL_TIMEOUT_DEFAULT);
-            if (status)
-                print_error("nfs41_unmount RPCSEC_GSS_KRB5P failed with %d\n",
-                            status);
-        }
+
         nfs41_RemoveEntry(pNetRootContext->mounts.lock, mount_tmp);
         RxFreePool(mount_tmp);
         mount_tmp = NULL;

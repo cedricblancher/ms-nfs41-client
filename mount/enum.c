@@ -1,6 +1,6 @@
 /* NFSv4.1 client for Windows
  * Copyright (C) 2012 The Regents of the University of Michigan
- * Copyright (C) 2023-2025 Roland Mainz <roland.mainz@nrubsig.org>
+ * Copyright (C) 2023-2026 Roland Mainz <roland.mainz@nrubsig.org>
  *
  * Olga Kornievskaia <aglo@umich.edu>
  * Casey Bodley <cbodley@umich.edu>
@@ -170,6 +170,29 @@ void PrintMountLine(
                     }
 
                     if (found_nfsunctag) {
+                        /*
+                         * Skip the authentication flavor in the UNC "tag",
+                         * only one of "_AUTH.+" can be set
+                         */
+                        if (strncmp(utf8unc_p, "_AUTHKRB5P", 10) == 0) {
+                            utf8unc_p += 10;
+                        }
+                        else if (strncmp(utf8unc_p, "_AUTHKRB5I", 10) == 0) {
+                            utf8unc_p += 10;
+                        }
+                        else if (strncmp(utf8unc_p, "_AUTHKRB5", 9) == 0) {
+                            utf8unc_p += 9;
+                        }
+                        else if (strncmp(utf8unc_p, "_AUTHNONE", 9) == 0) {
+                            utf8unc_p += 9;
+                        }
+                        else if (strncmp(utf8unc_p, "_AUTHSYS", 8) == 0) {
+                            utf8unc_p += 8;
+                        }
+
+                        /*
+                         * Skip caching tags
+                         */
                         if (strncmp(utf8unc_p, "_NOCACHE", 8) == 0) {
                             utf8unc_p += 8;
                         }

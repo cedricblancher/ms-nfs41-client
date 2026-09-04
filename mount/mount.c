@@ -73,6 +73,7 @@ static DWORD ParseRemoteName(
 #ifdef NFS41_DRIVER_MOUNT_UNCTAGNUMS
     IN DWORD unctagnum,
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
+    IN const wchar_t *auth_unc_tag,
     IN bool flag_nocache,
     IN bool flag_writethru,
     IN int override_portnum,
@@ -281,6 +282,7 @@ int mount_main(int argc, wchar_t *argv[])
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
     bool    flag_nocache = false;
     bool    flag_writethru = false;
+    const wchar_t *auth_unc_tag = L"_AUTHSYS";
 
     result = InitializeMountOptions(&Options, MAX_OPTION_BUFFER_SIZE);
     if (result) {
@@ -426,6 +428,33 @@ opt_o_argv_i_again:
                     }
 
                     argv_i = pns-1;
+                }
+                /*
+                 * Extract authentication flavor for the UNC "tag"
+                 *
+                 * |ParseMountOptions()| performs the authoritative validation
+                 * later; this early pass is needed because |ParseRemoteName()|
+                 * constructs the UNC "tag" value first.
+                 */
+                else if (wcsncmp(argv_i, L"sec=none", 8) == 0) {
+                    auth_unc_tag = L"_AUTHNONE";
+                    argv_i += 8;
+                }
+                else if (wcsncmp(argv_i, L"sec=sys", 7) == 0) {
+                    auth_unc_tag = L"_AUTHSYS";
+                    argv_i += 7;
+                }
+                else if (wcsncmp(argv_i, L"sec=krb5p", 9) == 0) {
+                    auth_unc_tag = L"_AUTHKRB5P";
+                    argv_i += 9;
+                }
+                else if (wcsncmp(argv_i, L"sec=krb5i", 9) == 0) {
+                    auth_unc_tag = L"_AUTHKRB5I";
+                    argv_i += 9;
+                }
+                else if (wcsncmp(argv_i, L"sec=krb5", 8) == 0) {
+                    auth_unc_tag = L"_AUTHKRB5";
+                    argv_i += 8;
                 }
                 /*
                  * Extract "nocache" option
@@ -650,6 +679,7 @@ opt_o_argv_i_done:
 #ifdef NFS41_DRIVER_MOUNT_UNCTAGNUMS
             unctagnum,
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
+            auth_unc_tag,
             flag_nocache,
             flag_writethru,
             port_num,
@@ -966,6 +996,7 @@ static DWORD ParseRemoteName(
 #ifdef NFS41_DRIVER_MOUNT_UNCTAGNUMS
     IN DWORD unctagnum,
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
+    IN const wchar_t *auth_unc_tag,
     IN bool flag_nocache,
     IN bool flag_writethru,
     IN int override_portnum,
@@ -993,8 +1024,9 @@ static DWORD ParseRemoteName(
 #ifdef NFS41_DRIVER_MOUNT_UNCTAGNUMS
     if (unctagnum != 0UL) {
         (void)swprintf(nfsunctagbuf, sizeof(nfsunctagbuf)/sizeof(wchar_t),
-            L"%ls%ls%ls_TAG%ld",
+            L"%ls%ls%ls%ls_TAG%ld",
             (use_nfspubfh?L"PUBNFS":L"NFS"),
+            auth_unc_tag,
             (flag_nocache?L"_NOCACHE":L""),
             (flag_writethru?L"_WRITETHRU":L""),
             (long)unctagnum);
@@ -1003,8 +1035,9 @@ static DWORD ParseRemoteName(
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
     {
         (void)swprintf(nfsunctagbuf, sizeof(nfsunctagbuf)/sizeof(wchar_t),
-            L"%ls%ls%ls",
+            L"%ls%ls%ls%ls",
             (use_nfspubfh?L"PUBNFS":L"NFS"),
+            auth_unc_tag,
             (flag_nocache?L"_NOCACHE":L""),
             (flag_writethru?L"_WRITETHRU":L""));
     }
