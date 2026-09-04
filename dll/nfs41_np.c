@@ -532,8 +532,8 @@ static bool is_nfs_server_path(const wchar_t *serverpath)
          * (there may be more tagging data after the initial prefix, like
          * "@PUBNFS_NOCACHE" etc.)
          */
-        if ((wcsstr(serverpath, L"@NFS") != NULL) ||
-            (wcsstr(serverpath, L"@PUBNFS") != NULL)) {
+        if ((wcsstr(serverpath, (L"@" NFS41_UNCTAG_NFS_L)) != NULL) ||
+            (wcsstr(serverpath, (L"@" NFS41_UNCTAG_PUBNFS_L)) != NULL)) {
             return true;
         }
     }

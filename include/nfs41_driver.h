@@ -23,6 +23,44 @@
 #ifndef _NFS41_DRIVER_
 #define _NFS41_DRIVER_ 1
 
+/*
+ * ms-nfs41-client UNC path "tags"
+ */
+
+/* prefix */
+#define NFS41_UNCTAG_NFS_L              L"NFS"
+#define NFS41_UNCTAG_NFS_A              "NFS"
+#define NFS41_UNCTAG_NFS_LEN            3
+#define NFS41_UNCTAG_PUBNFS_L           L"PUBNFS"
+#define NFS41_UNCTAG_PUBNFS_A           "PUBNFS"
+#define NFS41_UNCTAG_PUBNFS_LEN         6
+/* NFS authentification flavours */
+#define NFS41_UNCTAG_AUTH_NONE_L        L"_AUTHNONE"
+#define NFS41_UNCTAG_AUTH_NONE_A        "_AUTHNONE"
+#define NFS41_UNCTAG_AUTH_NONE_LEN      9
+#define NFS41_UNCTAG_AUTH_SYS_L         L"_AUTHSYS"
+#define NFS41_UNCTAG_AUTH_SYS_A         "_AUTHSYS"
+#define NFS41_UNCTAG_AUTH_SYS_LEN       8
+#define NFS41_UNCTAG_AUTH_KRB5_L        L"_AUTHKRB5"
+#define NFS41_UNCTAG_AUTH_KRB5_A        "_AUTHKRB5"
+#define NFS41_UNCTAG_AUTH_KRB5_LEN      9
+#define NFS41_UNCTAG_AUTH_KRB5I_L       L"_AUTHKRB5I"
+#define NFS41_UNCTAG_AUTH_KRB5I_A       "_AUTHKRB5I"
+#define NFS41_UNCTAG_AUTH_KRB5I_LEN     10
+#define NFS41_UNCTAG_AUTH_KRB5P_L       L"_AUTHKRB5P"
+#define NFS41_UNCTAG_AUTH_KRB5P_A       "_AUTHKRB5P"
+#define NFS41_UNCTAG_AUTH_KRB5P_LEN     10
+/* caching */
+#define NFS41_UNCTAG_NOCACHE_L          L"_NOCACHE"
+#define NFS41_UNCTAG_NOCACHE_A          "_NOCACHE"
+#define NFS41_UNCTAG_NOCACHE_LEN        8
+#define NFS41_UNCTAG_WRITETHRU_L        L"_WRITETHRU"
+#define NFS41_UNCTAG_WRITETHRU_A        "_WRITETHRU"
+#define NFS41_UNCTAG_WRITETHRU_LEN      10
+
+/*
+ * Devices+shared memory
+ */
 #define NFS41_DEVICE_NAME L"\\Device\\nfs41_driver"
 #define NFS41_SHADOW_DEVICE_NAME L"\\??\\nfs41_driver"
 #define NFS41_USER_DEVICE_NAME L"\\\\.\\nfs41_driver"

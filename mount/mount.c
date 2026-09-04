@@ -45,6 +45,7 @@
 
 #include "nfs41_build_features.h"
 #include "nfs41_driver.h" /* |NFS41_PROVIDER_NAME_U| */
+#include "mount.h"
 #include "options.h"
 #include "urlparser1.h"
 /*
@@ -282,7 +283,7 @@ int mount_main(int argc, wchar_t *argv[])
 #endif /* NFS41_DRIVER_MOUNT_UNCTAGNUMS */
     bool    flag_nocache = false;
     bool    flag_writethru = false;
-    const wchar_t *auth_unc_tag = L"_AUTHSYS";
+    const wchar_t *auth_unc_tag = NFS41_UNCTAG_AUTH_SYS_L;
 
     result = InitializeMountOptions(&Options, MAX_OPTION_BUFFER_SIZE);
     if (result) {
@@ -437,24 +438,28 @@ opt_o_argv_i_again:
                  * constructs the UNC "tag" value first.
                  */
                 else if (wcsncmp(argv_i, L"sec=none", 8) == 0) {
-                    auth_unc_tag = L"_AUTHNONE";
-                    argv_i += 8;
+                    auth_unc_tag = NFS41_UNCTAG_AUTH_NONE_L;
+                    argv_i += NFS41_UNCTAG_AUTH_NONE_LEN;
                 }
                 else if (wcsncmp(argv_i, L"sec=sys", 7) == 0) {
-                    auth_unc_tag = L"_AUTHSYS";
-                    argv_i += 7;
+                    auth_unc_tag = NFS41_UNCTAG_AUTH_SYS_L;
+                    argv_i += NFS41_UNCTAG_AUTH_SYS_LEN;
                 }
+                /*
+                 * "krb5i"+"krb5p" come before "krb5" because of
+                 * length ordering
+                 */
                 else if (wcsncmp(argv_i, L"sec=krb5p", 9) == 0) {
-                    auth_unc_tag = L"_AUTHKRB5P";
-                    argv_i += 9;
+                    auth_unc_tag = NFS41_UNCTAG_AUTH_KRB5P_L;
+                    argv_i += NFS41_UNCTAG_AUTH_KRB5P_LEN;
                 }
                 else if (wcsncmp(argv_i, L"sec=krb5i", 9) == 0) {
-                    auth_unc_tag = L"_AUTHKRB5I";
-                    argv_i += 9;
+                    auth_unc_tag = NFS41_UNCTAG_AUTH_KRB5I_L;
+                    argv_i += NFS41_UNCTAG_AUTH_KRB5I_LEN;
                 }
                 else if (wcsncmp(argv_i, L"sec=krb5", 8) == 0) {
-                    auth_unc_tag = L"_AUTHKRB5";
-                    argv_i += 8;
+                    auth_unc_tag = NFS41_UNCTAG_AUTH_KRB5_L;
+                    argv_i += NFS41_UNCTAG_AUTH_KRB5_LEN;
                 }
                 /*
                  * Extract "nocache" option
@@ -1025,10 +1030,10 @@ static DWORD ParseRemoteName(
     if (unctagnum != 0UL) {
         (void)swprintf(nfsunctagbuf, sizeof(nfsunctagbuf)/sizeof(wchar_t),
             L"%ls%ls%ls%ls_TAG%ld",
-            (use_nfspubfh?L"PUBNFS":L"NFS"),
+            (use_nfspubfh?NFS41_UNCTAG_PUBNFS_L:NFS41_UNCTAG_NFS_L),
             auth_unc_tag,
-            (flag_nocache?L"_NOCACHE":L""),
-            (flag_writethru?L"_WRITETHRU":L""),
+            (flag_nocache?NFS41_UNCTAG_NOCACHE_L:L""),
+            (flag_writethru?NFS41_UNCTAG_WRITETHRU_L:L""),
             (long)unctagnum);
     }
     else
@@ -1036,10 +1041,10 @@ static DWORD ParseRemoteName(
     {
         (void)swprintf(nfsunctagbuf, sizeof(nfsunctagbuf)/sizeof(wchar_t),
             L"%ls%ls%ls%ls",
-            (use_nfspubfh?L"PUBNFS":L"NFS"),
+            (use_nfspubfh?NFS41_UNCTAG_PUBNFS_L:NFS41_UNCTAG_NFS_L),
             auth_unc_tag,
-            (flag_nocache?L"_NOCACHE":L""),
-            (flag_writethru?L"_WRITETHRU":L""));
+            (flag_nocache?NFS41_UNCTAG_NOCACHE_L:L""),
+            (flag_writethru?NFS41_UNCTAG_WRITETHRU_L:L""));
     }
 
     /*

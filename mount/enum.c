@@ -36,10 +36,8 @@
 
 #include "nfs41_build_features.h"
 #include "nfs41_driver.h" /* |NFS41_PROVIDER_NAME_U| */
+#include "mount.h"
 
-/* prototypes */
-char *wcs2utf8str(const wchar_t *wstr);
-void PrintErrorMessage(IN DWORD dwError);
 
 /* fixme: this function needs a cleanup */
 static __inline
@@ -157,14 +155,16 @@ void PrintMountLine(
                     continue;
                 }
                 else {
-                    if (strncmp(utf8unc_p, "NFS", 3) == 0) {
+                    if (strncmp(utf8unc_p,
+                        NFS41_UNCTAG_NFS_A, NFS41_UNCTAG_NFS_LEN) == 0) {
                         /* Skip "NFS" */
-                        utf8unc_p += 3;
+                        utf8unc_p += NFS41_UNCTAG_NFS_LEN;
                         found_nfsunctag = true;
                     }
-                    else if (strncmp(utf8unc_p, "PUBNFS", 6) == 0) {
+                    else if (strncmp(utf8unc_p,
+                        NFS41_UNCTAG_PUBNFS_A, NFS41_UNCTAG_PUBNFS_LEN) == 0) {
                         /* Skip "PUBNFS" */
-                        utf8unc_p += 6;
+                        utf8unc_p += NFS41_UNCTAG_PUBNFS_LEN;
                         is_pubfh = true;
                         found_nfsunctag = true;
                     }
@@ -174,30 +174,48 @@ void PrintMountLine(
                          * Skip the authentication flavor in the UNC "tag",
                          * only one of "_AUTH.+" can be set
                          */
-                        if (strncmp(utf8unc_p, "_AUTHKRB5P", 10) == 0) {
-                            utf8unc_p += 10;
+                        if (strncmp(utf8unc_p,
+                            NFS41_UNCTAG_AUTH_NONE_A,
+                            NFS41_UNCTAG_AUTH_NONE_LEN) == 0) {
+                            utf8unc_p += NFS41_UNCTAG_AUTH_NONE_LEN;
                         }
-                        else if (strncmp(utf8unc_p, "_AUTHKRB5I", 10) == 0) {
-                            utf8unc_p += 10;
+                        else if (strncmp(utf8unc_p,
+                            NFS41_UNCTAG_AUTH_SYS_A,
+                            NFS41_UNCTAG_AUTH_SYS_LEN) == 0) {
+                            utf8unc_p += NFS41_UNCTAG_AUTH_SYS_LEN;
                         }
-                        else if (strncmp(utf8unc_p, "_AUTHKRB5", 9) == 0) {
-                            utf8unc_p += 9;
+                        /*
+                         * "krb5i"+"krb5p" come before "krb5" because of
+                         * length ordering
+                         */
+                        else if (strncmp(utf8unc_p,
+                            NFS41_UNCTAG_AUTH_KRB5P_A,
+                            NFS41_UNCTAG_AUTH_KRB5P_LEN) == 0) {
+                            utf8unc_p += NFS41_UNCTAG_AUTH_KRB5P_LEN;
                         }
-                        else if (strncmp(utf8unc_p, "_AUTHNONE", 9) == 0) {
-                            utf8unc_p += 9;
+                        else if (strncmp(utf8unc_p,
+                            NFS41_UNCTAG_AUTH_KRB5I_A,
+                            NFS41_UNCTAG_AUTH_KRB5I_LEN) == 0) {
+                            utf8unc_p += NFS41_UNCTAG_AUTH_KRB5I_LEN;
                         }
-                        else if (strncmp(utf8unc_p, "_AUTHSYS", 8) == 0) {
-                            utf8unc_p += 8;
+                        else if (strncmp(utf8unc_p,
+                            NFS41_UNCTAG_AUTH_KRB5_A,
+                            NFS41_UNCTAG_AUTH_KRB5_LEN) == 0) {
+                            utf8unc_p += NFS41_UNCTAG_AUTH_KRB5_LEN;
                         }
 
                         /*
                          * Skip caching tags
                          */
-                        if (strncmp(utf8unc_p, "_NOCACHE", 8) == 0) {
-                            utf8unc_p += 8;
+                        if (strncmp(utf8unc_p,
+                            NFS41_UNCTAG_NOCACHE_A,
+                            NFS41_UNCTAG_NOCACHE_LEN) == 0) {
+                            utf8unc_p += NFS41_UNCTAG_NOCACHE_LEN;
                         }
-                        if (strncmp(utf8unc_p, "_WRITETHRU", 10) == 0) {
-                            utf8unc_p += 10;
+                        if (strncmp(utf8unc_p,
+                            NFS41_UNCTAG_WRITETHRU_A,
+                            NFS41_UNCTAG_WRITETHRU_LEN) == 0) {
+                            utf8unc_p += NFS41_UNCTAG_WRITETHRU_LEN;
                         }
 #ifdef NFS41_DRIVER_MOUNT_UNCTAGNUMS
                         if (strncmp(utf8unc_p, "_TAG", 4) == 0) {

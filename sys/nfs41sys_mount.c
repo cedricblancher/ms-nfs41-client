@@ -824,11 +824,14 @@ NTSTATUS netroot_has_nfs_tag(
     DbgP("netroot_has_nfs_tag: state=%d, nfstag=0x%p\n", state, nfstag);
 
     if (((state == 2) || (state == 3)) && (nfstag != NULL)) {
-        if (wmemcmp(nfstag, L"@NFS", 4) == 0) {
+        if (wmemcmp(nfstag,
+            (L"@" NFS41_UNCTAG_NFS_L), 1+NFS41_UNCTAG_NFS_LEN) == 0) {
             *pubfh_tag = false;
             status = STATUS_SUCCESS;
         }
-        else if (wmemcmp(nfstag, L"@PUBNFS", 7) == 0) {
+        else
+        if (wmemcmp(nfstag,
+            (L"@" NFS41_UNCTAG_PUBNFS_L), 1+NFS41_UNCTAG_PUBNFS_LEN) == 0) {
             *pubfh_tag = true;
             status = STATUS_SUCCESS;
         }

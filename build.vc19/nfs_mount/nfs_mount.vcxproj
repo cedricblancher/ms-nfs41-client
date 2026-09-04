@@ -255,6 +255,7 @@
     <ClCompile Include="..\..\mount\urlparser1.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\mount\mount.h" />
     <ClInclude Include="..\..\mount\options.h" />
     <ClInclude Include="..\..\mount\urlparser1.h" />
   </ItemGroup>
