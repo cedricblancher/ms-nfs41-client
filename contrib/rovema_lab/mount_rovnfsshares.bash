@@ -76,6 +76,6 @@ ${nfsmountexe} -o sec=sys,rw,writethru,nocache 'O' nfs://derfwnb4966_ipv6linkloc
 ${nfsmountexe} -o rw 'J:' 'nfs://10.49.202.230//bigdisk/%e3%81%a0%e3%81%84%e3%81%99%e3%81%8d!%e3%83%9e%e3%82%a6%e3%82%b9/'
 ${nfsmountexe} -o sec=sys,rw,public=1 'P' nfs://10.49.202.230/bigdisk
 ${nfsmountexe} -o rw 'F:' 'nfs://10.49.202.239//nfsdata'
-${nfsmountexe} -o rw,unctagnum=4000 'E' 'nfs://10.49.202.239//test_casei001_pool'
+${nfsmountexe} -o rw,unctagnum=4000 'E' 'nfs://10.49.202.239//zroot_casei_pool001'
 
 printf '#done\n'
