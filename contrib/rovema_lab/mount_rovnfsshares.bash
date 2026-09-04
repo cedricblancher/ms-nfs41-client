@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2023-2026 Roland Mainz <roland.mainz@nrubsig.org>
+# Copyright (c) 2023-2026 Roland Mainz <roland.mainz@rovema.de>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@
 #
 
 #
-# Written by Roland Mainz <roland.mainz@nrubsig.org>
+# Written by Roland Mainz <roland.mainz@rovema.de>
 #
 
 export PATH+=':/home/roland_mainz/work/msnfs41_uidmapping/ms-nfs41-client/destdir/sbin'
