@@ -51,7 +51,11 @@ void PrintMountLine(
         alloca((remote_len+32)*sizeof(wchar_t));
     char *cygwin_nfsurl_buffer =
         alloca(((remote_len+32)*3)+8 +
-        9 /* "?public=1" */
+        /*
+         * 9 == sizeof("?public=1") (public NFS with relative path)
+         * or "/" for normal NFS with absolute path
+         */
+        9
         );
     wchar_t *b;
     LPCWSTR s;
@@ -152,6 +156,20 @@ void PrintMountLine(
                      * URL port number
                      */
                     *us++ = ':';
+
+                    /* copy port number */
+                    while (isdigit((int)(*us++ = *utf8unc_p++)))
+                        ;
+
+                    /*
+                     * nfs://-URLs for "public NFS" have a relative path,
+                     * normal NFS always has an absolute path
+                     */
+                    if (!is_pubfh) {
+                        /* Make sure path is absolute */
+                        *us++ = '/';
+                    }
+
                     continue;
                 }
                 else {

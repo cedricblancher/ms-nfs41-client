@@ -163,9 +163,14 @@ static int handle_volume(void *daemon_context, nfs41_upcall *upcall)
 #else
             MAX_PATH,
 #endif /* WINDOWSBUG_WORKAROUND_EXPLORER_BIGVOLUMELABEL_CRASH */
-            L"nfs://%s:%d/%s",
+            L"nfs://%s:%d/%s%s",
             session->client->rpc->server_name,
             2049,
+            /*
+             * nfs://-URLs for "public NFS" have a relative path,
+             * normal NFS always has an absolute path
+             */
+            (session->client->root->use_nfspubfh?"":"/"),
             (session->client->root->use_nfspubfh?"public=1":""));
         vi->VolumeLabelLength = (ULONG)(wcslen(vi->VolumeLabel)*sizeof(wchar_t));
         args->len = sizeof(args->info.volume_info) +
