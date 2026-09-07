@@ -815,7 +815,7 @@ NTSTATUS nfs41_CreateVNetRoot(
         NFS41GetDeviceExtension(RxContext->RxDeviceObject);
     DWORD nfs41d_version = DevExt->nfs41d_version;
     nfs41_mount_entry *existing_mount = NULL;
-    LUID luid;
+    LUID logonid;
     BOOLEAN found_existing_mount = FALSE;
 
     ASSERT((NodeType(pNetRoot) == RDBSS_NTC_NETROOT) &&
@@ -966,11 +966,11 @@ NTSTATUS nfs41_CreateVNetRoot(
          * |pSrvCall->pSrvCallName->Buffer|
          */
 
-        luid = pVNetRoot->LogonId;
+        logonid = pVNetRoot->LogonId;
 
 #ifdef DEBUG_MOUNT
-        DbgP("UNC path LUID 0x%lx.0x%lx\n",
-            (long)luid.HighPart, (long)luid.LowPart);
+        DbgP("UNC path logonid=(0x%lx.0x%lx)\n",
+            (long)logonid.HighPart, (long)logonid.LowPart);
 #endif
 
         PLIST_ENTRY pEntry;
@@ -990,21 +990,21 @@ NTSTATUS nfs41_CreateVNetRoot(
 
 #ifdef DEBUG_MOUNT
             DbgP("finding mount config: "
-                "comparing luid=(0x%lx.0x%lx) with "
-                "existing_mount->login_id=(0x%lx.0x%lx)\n",
-                (long)luid.HighPart, (long)luid.LowPart,
-                (long)existing_mount->login_id.HighPart,
-                (long)existing_mount->login_id.LowPart);
+                "comparing logonid=(0x%lx.0x%lx) with "
+                "existing_mount->logonid=(0x%lx.0x%lx)\n",
+                (long)logonid.HighPart, (long)logonid.LowPart,
+                (long)existing_mount->logonid.HighPart,
+                (long)existing_mount->logonid.LowPart);
 #endif
 
-            if (RtlEqualLuid(&luid, &existing_mount->login_id)) {
+            if (RtlEqualLuid(&logonid, &existing_mount->logonid)) {
                 /* found existing mount with exact LUID match */
                 found_mount_entry = existing_mount;
                 break;
             }
 #ifdef NFS41_DRIVER_SYSTEM_LUID_MOUNTS_ARE_GLOBAL
             else if (RtlEqualLuid(&SystemLuid,
-                &existing_mount->login_id)) {
+                &existing_mount->logonid)) {
                 /*
                  * found existing mount for user "SYSTEM"
                  * We continue searching the |pNetRootContext->mounts|
@@ -1021,8 +1021,8 @@ NTSTATUS nfs41_CreateVNetRoot(
         if (found_mount_entry) {
             copy_nfs41_mount_config(Config, &found_mount_entry->Config);
             DbgP("Found existing mount: LUID=(0x%lx.0x%lx) Entry Config->MntPt='%wZ'\n",
-                (long)found_mount_entry->login_id.HighPart,
-                (long)found_mount_entry->login_id.LowPart,
+                (long)found_mount_entry->logonid.HighPart,
+                (long)found_mount_entry->logonid.LowPart,
                 &Config->MntPt);
             status = STATUS_SUCCESS;
         }
@@ -1113,7 +1113,7 @@ NTSTATUS nfs41_CreateVNetRoot(
         goto out_free;
     }
 
-    luid = pVNetRoot->LogonId;
+    logonid = pVNetRoot->LogonId;
 
     if (!pNetRootContext->mounts_init) {
 #ifdef DEBUG_MOUNT
@@ -1132,12 +1132,13 @@ NTSTATUS nfs41_CreateVNetRoot(
             existing_mount = (nfs41_mount_entry *)CONTAINING_RECORD(pEntry,
                     nfs41_mount_entry, next);
 #ifdef DEBUG_MOUNT
-            DbgP("comparing 0x%lx.0x%lx with 0x%lx.0x%lx\n",
-                (long)luid.HighPart, (long)luid.LowPart,
-                (long)existing_mount->login_id.HighPart,
-                (long)existing_mount->login_id.LowPart);
+            DbgP("comparing logonid=(0x%lx.0x%lx), "
+                "existing_mount->logonid(0x%lx.0x%lx)\n",
+                (long)logonid.HighPart, (long)logonid.LowPart,
+                (long)existing_mount->logonid.HighPart,
+                (long)existing_mount->logonid.LowPart);
 #endif
-            if (RtlEqualLuid(&luid, &existing_mount->login_id)) {
+            if (RtlEqualLuid(&logonid, &existing_mount->logonid)) {
 #ifdef DEBUG_MOUNT
                 DbgP("Found a matching LUID entry\n");
 #endif
@@ -1181,7 +1182,7 @@ NTSTATUS nfs41_CreateVNetRoot(
         }
         entry->session = pVNetRootContext->session;
         entry->ref_count = 1;
-        RtlCopyLuid(&entry->login_id, &luid);
+        RtlCopyLuid(&entry->logonid, &logonid);
         /*
          * Save mount config so we can use it for
          * \\server@(PUBNFS|NFS)*@port\path mounts later
@@ -1388,8 +1389,8 @@ nfs41_print_mounts(PNFS41_NETROOT_EXTENSION pNetRootContext)
             "sessions=0x%p\n",
             mount_index,
             mount,
-            (long)mount->login_id.HighPart,
-            (long)mount->login_id.LowPart,
+            (long)mount->logonid.HighPart,
+            (long)mount->logonid.LowPart,
             &mount->Config.SrvName,
             &mount->Config.MntPt,
             &mount->Config.SecFlavor,
@@ -1485,8 +1486,8 @@ NTSTATUS nfs41_FinalizeVNetRoot(
                 pVNetRoot,
                 pNetRoot,
                 mount,
-                (long)mount->login_id.HighPart,
-                (long)mount->login_id.LowPart,
+                (long)mount->logonid.HighPart,
+                (long)mount->logonid.LowPart,
                 &mount->Config.MntPt,
                 mount->session,
                 (long)mount->ref_count);
