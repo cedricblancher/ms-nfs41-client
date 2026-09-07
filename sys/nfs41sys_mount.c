@@ -862,7 +862,7 @@ NTSTATUS nfs41_CreateVNetRoot(
     DWORD nfs41d_version = DevExt->nfs41d_version;
     nfs41_mount_entry *existing_mount = NULL;
     LUID luid;
-    BOOLEAN found_existing_mount = FALSE, found_matching_flavor = FALSE;
+    BOOLEAN found_existing_mount = FALSE;
 
     ASSERT((NodeType(pNetRoot) == RDBSS_NTC_NETROOT) &&
         (NodeType(pNetRoot->pSrvCall) == RDBSS_NTC_SRVCALL));
@@ -1193,14 +1193,9 @@ NTSTATUS nfs41_CreateVNetRoot(
 #endif
                 found_existing_mount = TRUE;
 
-                if (existing_mount->session != INVALID_HANDLE_VALUE) {
-                    pVNetRootContext->session = existing_mount->session;
-                }
+                pVNetRootContext->session = existing_mount->session;
+                existing_mount->ref_count++;
 
-                if (pVNetRootContext->session &&
-                        pVNetRootContext->session != INVALID_HANDLE_VALUE) {
-                    found_matching_flavor = TRUE;
-                }
                 break;
             }
             if (pEntry->Flink == &pNetRootContext->mounts.head)
@@ -1208,10 +1203,6 @@ NTSTATUS nfs41_CreateVNetRoot(
             pEntry = pEntry->Flink;
         }
         ExReleaseFastMutexUnsafe(&pNetRootContext->mounts.lock);
-#ifdef DEBUG_MOUNT
-        if (!found_matching_flavor)
-            DbgP("Didn't find matching security flavor\n");
-#endif
     }
 
     /* send the mount upcall */
@@ -1239,6 +1230,7 @@ NTSTATUS nfs41_CreateVNetRoot(
             goto out_free;
         }
         entry->session = pVNetRootContext->session;
+        entry->ref_count = 1;
         RtlCopyLuid(&entry->login_id, &luid);
         /*
          * Save mount config so we can use it for
@@ -1247,17 +1239,8 @@ NTSTATUS nfs41_CreateVNetRoot(
         copy_nfs41_mount_config(&entry->Config, Config);
         nfs41_AddEntry(pNetRootContext->mounts.lock,
             pNetRootContext->mounts, entry);
-    } else if (!found_matching_flavor) {
-        ASSERT(existing_mount != NULL);
-        /* modify existing mount entry */
-#ifdef DEBUG_MOUNT
-        DbgP("Using existing %d flavor session 0x%p\n",
-            (int)pVNetRootContext->sec_flavor,
-            pVNetRootContext->session);
-#endif
-
-        existing_mount->session = pVNetRootContext->session;
     }
+
     pNetRootContext->nfs41d_version = nfs41d_version;
 
     DbgP("default pNetRoot->DiskParameters=("
@@ -1367,8 +1350,6 @@ NTSTATUS nfs41_FinalizeNetRoot(
     NTSTATUS status = STATUS_SUCCESS;
     PNFS41_NETROOT_EXTENSION pNetRootContext =
         NFS41GetNetRootExtension((PMRX_NET_ROOT)pNetRoot);
-    nfs41_updowncall_entry *tmp;
-    nfs41_mount_entry *mount_tmp;
 
 #ifdef DEBUG_MOUNT
     DbgEn();
@@ -1385,7 +1366,6 @@ NTSTATUS nfs41_FinalizeNetRoot(
             "pNetRoot->Type=%d not supported\n",
             pNetRoot,
             (int)pNetRoot->Type);
-        status = STATUS_NOT_SUPPORTED;
         goto out;
     }
 
@@ -1402,55 +1382,8 @@ NTSTATUS nfs41_FinalizeNetRoot(
             pNetRoot,
             (long)pNetRoot->NumberOfFcbs,
             (long)pNetRoot->NumberOfSrvOpens);
-        goto out;
     }
 
-    do {
-        nfs41_GetFirstMountEntry(pNetRootContext->mounts.lock,
-            pNetRootContext->mounts, mount_tmp);
-        if (mount_tmp == NULL)
-            break;
-#ifdef DEBUG_MOUNT
-        DbgP("Removing entry luid 0x%lx.0x%lx from mount list\n",
-            (long)mount_tmp->login_id.HighPart,
-            (long)mount_tmp->login_id.LowPart);
-#endif
-        if (mount_tmp->session != INVALID_HANDLE_VALUE) {
-            status = nfs41_unmount(mount_tmp->session,
-                pNetRootContext->nfs41d_version, UPCALL_TIMEOUT_DEFAULT);
-            if (status)
-                print_error("nfs41_unmount failed with %d\n", status);
-        }
-
-        nfs41_RemoveEntry(pNetRootContext->mounts.lock, mount_tmp);
-        RxFreePool(mount_tmp);
-        mount_tmp = NULL;
-    } while (1);
-    /* ignore any errors from unmount */
-    status = STATUS_SUCCESS;
-
-    // check if there is anything waiting in the upcall or downcall queue
-    do {
-        nfs41_GetFirstEntry(upcalllist.lock, upcalllist, tmp);
-        if (tmp != NULL) {
-            DbgP("Removing entry from upcall list\n");
-            nfs41_RemoveEntry(upcalllist.lock, tmp);
-            tmp->status = STATUS_INSUFFICIENT_RESOURCES;
-            (void)KeSetEvent(&tmp->cond, IO_NFS41FS_INCREMENT, FALSE);
-        } else
-            break;
-    } while (1);
-
-    do {
-        nfs41_GetFirstEntry(downcalllist.lock, downcalllist, tmp);
-        if (tmp != NULL) {
-            DbgP("Removing entry from downcall list\n");
-            nfs41_RemoveEntry(downcalllist.lock, tmp);
-            tmp->status = STATUS_INSUFFICIENT_RESOURCES;
-            (void)KeSetEvent(&tmp->cond, IO_NFS41FS_INCREMENT, FALSE);
-        } else
-            break;
-    } while (1);
 out:
     FsRtlExitFileSystem();
 #ifdef DEBUG_MOUNT
@@ -1459,31 +1392,193 @@ out:
     return status;
 }
 
+static void
+nfs41_print_mounts(PNFS41_NETROOT_EXTENSION pNetRootContext)
+{
+    const LIST_ENTRY *head;
+    PLIST_ENTRY entry;
+    ULONG mount_index = 0;
+
+    if (pNetRootContext == NULL) {
+        DbgP("nfs41_print_mounts: pNetRootContext is NULL\n");
+        return;
+    }
+
+    if (!pNetRootContext->mounts_init) {
+        DbgP("nfs41_print_mounts: "
+            "pNetRootContext=0x%p mounts are not initialized\n",
+            pNetRootContext);
+        return;
+    }
+
+    ExAcquireFastMutexUnsafe(&pNetRootContext->mounts.lock);
+
+    head = &pNetRootContext->mounts.head;
+
+    DbgP("nfs41_print_mounts: "
+        "pNetRootContext=0x%p mounts.head=0x%p\n",
+        pNetRootContext,
+        head);
+
+    for (entry = head->Flink;
+         entry != head;
+         entry = entry->Flink) {
+        nfs41_mount_entry *mount;
+
+        mount = CONTAINING_RECORD(
+            entry,
+            nfs41_mount_entry,
+            next);
+
+        DbgP("nfs41_print_mounts: mount[%lu]=0x%p "
+            "LUID=(0x%lx.0x%lx) "
+            "server='%wZ' mountpoint='%wZ' sec='%wZ' "
+            "nfsvers=%lu readonly=%u "
+            "rsize=%lu wsize=%lu timeout=%lu "
+            "sessions=0x%p\n",
+            mount_index,
+            mount,
+            (long)mount->login_id.HighPart,
+            (long)mount->login_id.LowPart,
+            &mount->Config.SrvName,
+            &mount->Config.MntPt,
+            &mount->Config.SecFlavor,
+            mount->Config.nfsvers,
+            (unsigned int)mount->Config.ReadOnly,
+            mount->Config.ReadSize,
+            mount->Config.WriteSize,
+            mount->Config.timeout,
+            mount->session);
+
+        mount_index++;
+    }
+
+    DbgP("nfs41_print_mounts: mount_count=%lu\n", mount_index);
+
+    ExReleaseFastMutexUnsafe(&pNetRootContext->mounts.lock);
+}
+
 NTSTATUS nfs41_FinalizeVNetRoot(
     IN OUT PMRX_V_NET_ROOT pVNetRoot,
     IN PBOOLEAN ForceDisconnect)
 {
     NTSTATUS status = STATUS_SUCCESS;
+    PMRX_NET_ROOT pNetRoot = pVNetRoot->pNetRoot;
+    PNFS41_NETROOT_EXTENSION pNetRootContext =
+        NFS41GetNetRootExtension(pNetRoot);
+    PNFS41_V_NET_ROOT_EXTENSION pVNetRootContext =
+        NFS41GetVNetRootExtension(pVNetRoot);
+
 #ifdef DEBUG_MOUNT
     DbgEn();
     print_v_net_root(pVNetRoot);
 #endif
     FsRtlEnterFileSystem();
 
-    DbgP("nfs41_FinalizeVNetRoot(pVNetRoot=0x%p,pNetRoot=0x%p)\n",
+    DbgP("nfs41_FinalizeVNetRoot(pVNetRoot=0x%p),pNetRoot=0x%p\n",
         pVNetRoot,
-        pVNetRoot->pNetRoot);
+        pNetRoot);
+
+    nfs41_print_mounts(pNetRootContext);
 
     if ((pVNetRoot->pNetRoot->Type != NET_ROOT_DISK) &&
         (pVNetRoot->pNetRoot->Type != NET_ROOT_WILD)) {
-        DbgP("nfs41_FinalizeVNetRoot(pVNetRoot=0x%p,pNetRoot=0x%p): "
+        DbgP("nfs41_FinalizeVNetRoot"
+            "(pVNetRoot=0x%p),pNetRoot=0x%p: "
             "pNetRoot->Type=%d not supported\n",
             pVNetRoot,
-            pVNetRoot->pNetRoot,
-            (int)pVNetRoot->pNetRoot->Type);
-        status = STATUS_NOT_SUPPORTED;
+            pNetRoot,
+            (int)pNetRoot->Type);
         goto out;
     }
+
+    if ((pNetRootContext == NULL) || (!pNetRootContext->mounts_init)) {
+        DbgP("nfs41_FinalizeVNetRoot"
+            "(pVNetRoot=0x%p),pNetRoot=0x%p: "
+            "No valid session established\n",
+            pVNetRoot,
+            pNetRoot);
+        goto out;
+    }
+
+    /*
+     * Decrement |nfs41_mount_entry.ref_count| for the |nfs41_mount_entry|,
+     * and send an unmount to notify the userland daemon that the
+     * vnetroot is gone
+     */
+    PLIST_ENTRY head;
+    PLIST_ENTRY entry;
+
+    ExAcquireFastMutexUnsafe(&pNetRootContext->mounts.lock);
+
+    head = &pNetRootContext->mounts.head;
+    entry = head->Flink;
+
+    while (entry != head) {
+        PLIST_ENTRY next;
+        nfs41_mount_entry *mount;
+
+        /* Save |entry->Flink| in case we remove the |entry| */
+        next = entry->Flink;
+
+        mount = CONTAINING_RECORD(
+            entry,
+            nfs41_mount_entry,
+            next);
+
+        if (mount->session == pVNetRootContext->session) {
+            DbgP("nfs41_FinalizeVNetRoot"
+                "(pVNetRoot=0x%p),pNetRoot=0x%p: "
+                "removing mount=0x%p "
+                "LUID=(0x%lx.0x%lx) "
+                "mountpoint='%wZ',session=0x%p,ref_count=%ld\n",
+                pVNetRoot,
+                pNetRoot,
+                mount,
+                (long)mount->login_id.HighPart,
+                (long)mount->login_id.LowPart,
+                &mount->Config.MntPt,
+                mount->session,
+                (long)mount->ref_count);
+            mount->ref_count--;
+
+            /*
+             * FIXME: We should wait for outstanding requests in the
+             * updowncall queue for this vnetroot
+             */
+
+            if (mount->session != INVALID_HANDLE_VALUE) {
+                status = nfs41_unmount(mount->session,
+                    pNetRootContext->nfs41d_version, UPCALL_TIMEOUT_DEFAULT);
+                if (status) {
+                    print_error("nfs41_FinalizeVNetRoot: "
+                        "nfs41_unmount failed with %d\n", status);
+                }
+            }
+
+            if (mount->ref_count == 0) {
+                RemoveEntryList(&mount->next);
+                mount->next.Flink = NULL;
+                mount->next.Blink = NULL;
+
+                /*
+                 * FIXME: We should remove any remaining requests in the
+                 * updowncall queue for this vnetroot
+                 */
+
+                RxFreePool(mount);
+            }
+
+            break;
+        }
+
+        entry = next;
+    }
+
+    ExReleaseFastMutexUnsafe(&pNetRootContext->mounts.lock);
+
+    /* ignore any errors from unmount */
+    status = STATUS_SUCCESS;
 
 out:
     FsRtlExitFileSystem();

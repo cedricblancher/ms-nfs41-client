@@ -418,6 +418,7 @@ typedef struct _nfs41_mount_entry {
     LIST_ENTRY next;
     LUID login_id;
     HANDLE session;
+    LONG ref_count;
     NFS41_MOUNT_CONFIG Config;
 } nfs41_mount_entry;
 

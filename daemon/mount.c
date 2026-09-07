@@ -282,8 +282,7 @@ static int handle_mount(void *daemon_context, nfs41_upcall *upcall)
     }
 
     if (upcall->root_ref != INVALID_HANDLE_VALUE) {
-        /* use an existing root from a previous mount, but don't take an
-         * extra reference; we'll only get one UNMOUNT upcall for each root */
+        /* use an existing root from a previous mount */
         root = upcall->root_ref;
     } else {
         // create root
@@ -350,8 +349,7 @@ static int handle_mount(void *daemon_context, nfs41_upcall *upcall)
 
     nfs41_superblock_fs_attributes(file.fh.superblock, &args->FsAttrs);
 
-    if (upcall->root_ref == INVALID_HANDLE_VALUE)
-        nfs41_root_ref(root);
+    nfs41_root_ref(root);
     upcall->root_ref = root;
     args->lease_time = client->session->lease_time;
 out:
