@@ -732,52 +732,6 @@ NTSTATUS map_sec_flavor(
 }
 
 static
-NTSTATUS nfs41_GetLUID(
-    PLUID id)
-{
-    NTSTATUS status = STATUS_SUCCESS;
-    SECURITY_SUBJECT_CONTEXT sec_ctx;
-    SECURITY_QUALITY_OF_SERVICE sec_qos;
-    SECURITY_CLIENT_CONTEXT clnt_sec_ctx;
-
-    SeCaptureSubjectContext(&sec_ctx);
-    SeLockSubjectContext(&sec_ctx);
-
-    sec_qos.ContextTrackingMode = SECURITY_STATIC_TRACKING;
-    sec_qos.ImpersonationLevel = SecurityIdentification;
-    sec_qos.Length = sizeof(SECURITY_QUALITY_OF_SERVICE);
-    sec_qos.EffectiveOnly = 0;
-    /*
-     * Arg |ServerIsRemote| must be |FALSE|, otherwise processes
-     * like Cygwin setup-x86_64.exe can fail during "Activation
-     * Context" creation in
-     * |SeCreateClientSecurityFromSubjectContext()| with
-     * |STATUS_BAD_IMPERSONATION_LEVEL|
-     */
-    status = SeCreateClientSecurityFromSubjectContext(&sec_ctx, &sec_qos,
-        FALSE, &clnt_sec_ctx);
-    if (status) {
-        print_error("nfs41_GetLUID: SeCreateClientSecurityFromSubjectContext "
-             "failed status=0x%lx\n", (long)status);
-        goto release_sec_ctx;
-    }
-    status = SeQueryAuthenticationIdToken(clnt_sec_ctx.ClientToken, id);
-    if (status) {
-        print_error("nfs41_GetLUID: "
-            "SeQueryAuthenticationIdToken() failed 0x%lx\n",
-            (long)status);
-        goto release_clnt_sec_ctx;
-    }
-release_clnt_sec_ctx:
-    SeDeleteClientSecurity(&clnt_sec_ctx);
-release_sec_ctx:
-    SeUnlockSubjectContext(&sec_ctx);
-    SeReleaseSubjectContext(&sec_ctx);
-
-    return status;
-}
-
-static
 NTSTATUS netroot_has_nfs_tag(
     IN PUNICODE_STRING SrvCallName,
     IN PUNICODE_STRING NetRootName,
@@ -1012,9 +966,7 @@ NTSTATUS nfs41_CreateVNetRoot(
          * |pSrvCall->pSrvCallName->Buffer|
          */
 
-        status = nfs41_GetLUID(&luid);
-        if (status)
-            goto out_free;
+        luid = pVNetRoot->LogonId;
 
 #ifdef DEBUG_MOUNT
         DbgP("UNC path LUID 0x%lx.0x%lx\n",
@@ -1161,9 +1113,7 @@ NTSTATUS nfs41_CreateVNetRoot(
         goto out_free;
     }
 
-    status = nfs41_GetLUID(&luid);
-    if (status)
-        goto out_free;
+    luid = pVNetRoot->LogonId;
 
     if (!pNetRootContext->mounts_init) {
 #ifdef DEBUG_MOUNT
